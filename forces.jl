@@ -35,7 +35,7 @@ function buildtree(w::World)
     r = 0.5*(maxc-minc)
     md= 0.5*(maxc+minc)
     initnode!(w.tree.head, r*1.05, md, md, md)
-    insert!(w.tree, w.particles, Modify)
+    insert!(w.tree, deepcopy(w.particles), Modify)
 end
 
 type DataToCalculateAccelOnParticle

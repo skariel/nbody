@@ -27,6 +27,40 @@ function calc_accel_brute_force(w::World, ixs=1:w.n)
     ax[ixs],ay[ixs],az[ixs]
 end
 
+function calc_k_energy(w::World, ixs=1:w.n)
+    k = 0.0
+    @simd for i in 1:w.n
+        @inbounds vx = w.vx[i]
+        @inbounds vy = w.vy[i]
+        @inbounds k += vx*vx+vy*vy
+    end
+    0.5*w.particles[1]._m*k
+end
+
+function calc_p_energy(w::World)
+    p = 0.0
+    for i in 1:w.n
+        @inbounds p_i = w.particles[i]
+        for j in 1:w.n
+            i==j && continue
+            @inbounds pj = w.particles[j]
+            const dx = pj._x - p_i._x
+            const dy = pj._y - p_i._y
+            const dz = pj._z - p_i._z
+            const dx2 = dx*dx
+            const dy2 = dy*dy
+            const dz2 = dz*dz
+            const r2 = dx2+dy2+dz2
+            const r22 = r2+w.smth2
+            const denom = sqrt(r22)
+            p -= 1.0/denom
+        end
+    end
+    0.5*p*w.particles[1]._m*w.particles[1]._m
+end
+
+calc_tot_energy(w::World) = calc_k_energy(w) + calc_p_energy(w)
+
 type TestAcc
     ax_tree::Array{Float64,1}
     a_tree::Array{Float64,1}

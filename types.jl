@@ -9,7 +9,7 @@ getx(p::Particle) = p._x
 gety(p::Particle) = p._y
 getz(p::Particle) = p._z
 withxyz(p::Particle, x::Float64, y::Float64, z::Float64) = Particle(x,y,z, p._m)
-addxyz(p::Particle, dx::Float64, dy::Float64, dz::Float64) = Particle(p._x+dx,p._y+y,p._z+z, p._m)
+addxyz(p::Particle, dx::Float64, dy::Float64, dz::Float64) = Particle(p._x+dx,p._y+dy,p._z+dz, p._m)
 
 type World
     tree::OctTree{Particle}

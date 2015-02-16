@@ -23,15 +23,15 @@ function drift!(w::World; dt=0.0)
         const dx = w.vx[i]*dt
         const dy = w.vy[i]*dt
         const dz = w.vz[i]*dt
-        w.particles[i] = withxyz(w.particles[i], dx, dy, dz)
+        w.particles[i] = addxyz(w.particles[i], dx, dy, dz)
     end
 end
 
 function exec!(sim::Simulation)
     reset!(sim)
+    tic()
     calc_accel!(sim.w)
     break_time = false
-    tic()
     while true
         sim.step += 1
         sim.dt = calc_dt(sim.w)
@@ -46,8 +46,8 @@ function exec!(sim::Simulation)
 
         kick!(sim.w, dt=sim.dt/2)
         drift!(sim.w, dt=sim.dt)
-        kick!(sim.w, dt=sim.dt/2)
         calc_accel!(sim.w)
+        kick!(sim.w, dt=sim.dt/2)
 
         sim.t += sim.dt
         elapsed = toq()
