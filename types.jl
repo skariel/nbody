@@ -24,3 +24,15 @@ type World
     smth2::Float64
     dtfrac::Float64
 end
+
+type Simulation
+    w::World
+    t::Float64
+    dt::Float64
+    ti::Float64
+    tf::Float64
+    xi::Array{Float64, 1}
+    yi::Array{Float64, 1}
+    vxi::Array{Float64, 1}
+    vyi::Array{Float64, 1}
+end
