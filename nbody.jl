@@ -8,5 +8,6 @@ include("simulation.jl")
 include("forces.jl")
 include("realizations.jl")
 include("test.jl")
+include("plotting.jl")
 
 end # module

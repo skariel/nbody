@@ -10,7 +10,7 @@ function calc_dt(w::World)
     sqrt(mindt2)
 end
 
-function kick!(w::World, dt::Float64)
+function kick!(w::World; dt=0.0)
     @inbounds for i in 1:w.n
         w.vx[i] += w.ax[i]*dt
         w.vy[i] += w.ay[i]*dt
@@ -18,11 +18,12 @@ function kick!(w::World, dt::Float64)
     end
 end
 
-function drift!(w::World, dt::Float64)
+function drift!(w::World; dt=0.0)
     @inbounds for i in 1:w.n
-        w.x[i] += w.vx[i]*dt
-        w.y[i] += w.vy[i]*dt
-        w.z[i] += w.vz[i]*dt
+        const dx = w.vx[i]*dt
+        const dy = w.vy[i]*dt
+        const dz = w.vz[i]*dt
+        w.particles[i] = withxyz(w.particles[i], dx, dy, dz)
     end
 end
 
@@ -30,27 +31,32 @@ function exec!(sim::Simulation)
     reset!(sim)
     calc_accel!(sim.w)
     break_time = false
+    tic()
     while true
         sim.step += 1
-        print("step=",sim.step," t=",sim.t," ")
-        tic()
         sim.dt = calc_dt(sim.w)
-        if !sim.limit_by_step
+        if !sim.limit_by_steps
             if sim.t+sim.dt > sim.tf
                 sim.dt = sim.tf - sim.t
                 break_time = true
             end
         end
+        print("s=",sim.step," t=",sim.t," dt=",sim.dt)
+        tic()
 
         kick!(sim.w, dt=sim.dt/2)
         drift!(sim.w, dt=sim.dt)
         kick!(sim.w, dt=sim.dt/2)
+        calc_accel!(sim.w)
 
         sim.t += sim.dt
         elapsed = toq()
-        print(elapsed," sec")
+        print(" /",elapsed,"s\n")
 
-        sim.limit_by_steps && sim.step >= sim.stepc && break
+        sim.limit_by_steps && sim.step >= sim.stepf && break
         break_time && break
     end
+    println("\n--- Done!\n")
+    toc()
+    nothing
 end
