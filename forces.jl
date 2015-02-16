@@ -103,7 +103,7 @@ end
     return true
 end
 
-@inline function calculate_accel_on_particle(w::World, particle_ix::Int64)
+@inline function calculate_accel_on_particle!(w::World, particle_ix::Int64)
     @inbounds const p = w.particles[particle_ix]
     @inbounds data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,p._x,p._y,p._z,w)
     map(w.tree, data)
@@ -112,7 +112,7 @@ end
     @inbounds w.az[particle_ix] = data.az
 end
 
-function calc_accel(w::World)
+function calc_accel!(w::World)
     buildtree(w)
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     @inbounds for i in 1:w.n

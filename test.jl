@@ -42,7 +42,7 @@ function test_acc(n, nout)
     buildtree(w)
 
     for i in ixs
-        calculate_accel_on_particle(w, i)
+        calculate_accel_on_particle!(w, i)
     end
 
     ax_tree = w.ax[ixs]

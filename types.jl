@@ -43,24 +43,23 @@ type Simulation
     limit_by_steps::Bool
 end
 
-function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
-    sim = Simulation(
+Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false) =
+    Simulation(
         w,
         ti,  # t
         0.0, # dt
         ti,  # ti
         tf,  # tf
         0,   # stepf::Int64
-        [p._x for p in s.w.particles], #xi
-        [p._y for p in s.w.particles], #yi
-        [p._z for p in s.w.particles], #yi
-        [0.0  for p in s.w.particles], #vxi
-        [0.0  for p in s.w.particles], #vyi
-        [0.0  for p in s.w.particles], #vzi
+        [p._x for p in w.particles], #xi
+        [p._y for p in w.particles], #yi
+        [p._z for p in w.particles], #yi
+        [0.0  for p in w.particles], #vxi
+        [0.0  for p in w.particles], #vyi
+        [0.0  for p in w.particles], #vzi
         0, # step::Int64
         limit_by_steps # limit_by_steps::Bool
     )
-end
 
 function reset!(s::Simulation)
     # set initial positions and velocities
@@ -72,5 +71,5 @@ function reset!(s::Simulation)
     end
     # set times and steps
     s.step = 0
-    s.t = s.ti    
+    s.t = s.ti
 end
