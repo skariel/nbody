@@ -8,6 +8,7 @@ Particle() = Particle(0., 0., 0., 0.)
 getx(p::Particle) = p._x
 gety(p::Particle) = p._y
 getz(p::Particle) = p._z
+withxyz(p::Particle) = Particle(x,y,z,p._m)
 
 type World
     tree::OctTree{Particle}
@@ -31,8 +32,45 @@ type Simulation
     dt::Float64
     ti::Float64
     tf::Float64
+    stepf::Int64
     xi::Array{Float64, 1}
     yi::Array{Float64, 1}
+    zi::Array{Float64, 1}
     vxi::Array{Float64, 1}
     vyi::Array{Float64, 1}
+    vzi::Array{Float64, 1}
+    step::Int64
+    limit_by_steps::Bool
+end
+
+function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
+    sim = Simulation(
+        w,
+        ti,  # t
+        0.0, # dt
+        ti,  # ti
+        tf,  # tf
+        0,   # stepf::Int64
+        [p._x for p in s.w.particles], #xi
+        [p._y for p in s.w.particles], #yi
+        [p._z for p in s.w.particles], #yi
+        [0.0  for p in s.w.particles], #vxi
+        [0.0  for p in s.w.particles], #vyi
+        [0.0  for p in s.w.particles], #vzi
+        0, # step::Int64
+        limit_by_steps # limit_by_steps::Bool
+    )
+end
+
+function reset!(s::Simulation)
+    # set initial positions and velocities
+    @inbounds for i in 1:s.w.n
+        s.w.particles[i] = withxyz(s.xi[i], s.yi[i], s.zi[i])
+        s.w.vxi[i] = 0.0
+        s.w.vyi[i] = 0.0
+        s.w.vzi[i] = 0.0
+    end
+    # set times and steps
+    s.step = 0
+    s.t = s.ti    
 end
