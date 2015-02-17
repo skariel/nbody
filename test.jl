@@ -1,5 +1,14 @@
 using Base.Test
 
+function calc_accel_brute_force!(w::World, ixs=1:w.n)
+    ax,ay,az = calc_accel_brute_force(w, 1:w.n)
+    @inbounds for i in ixs
+        w.ax[i] = ax[i]
+        w.ay[i] = ay[i]
+        w.az[i] = az[i]
+    end
+end
+
 function calc_accel_brute_force(w::World, ixs=1:w.n)
     ax = zeros(w.n)
     ay = zeros(w.n)
@@ -51,8 +60,7 @@ function calc_p_energy(w::World)
             const dy2 = dy*dy
             const dz2 = dz*dz
             const r2 = dx2+dy2+dz2
-            const r22 = r2+w.smth2
-            const denom = sqrt(r22)
+            const denom = sqrt(r2+w.smth2)
             p -= 1.0/denom
         end
     end
@@ -70,13 +78,22 @@ type TestAcc
     fbelow::Array{Float64,1}
 end
 
-function test_acc(n, nout)
+function test_acc(n, nout; smth=0.01, opening_alpha=0.7, tp=:spherical, use_brute_force=false)
     ixs = randperm(n)[1:nout]
-    w = worldspherical(n)
+    w::World
+    if tp==:spherical
+        w = worldspherical(n, smth=smth, opening_alpha=opening_alpha)
+    else
+        w = worldnormal(n, smth=smth, opening_alpha=opening_alpha)
+    end
     buildtree(w)
 
-    for i in ixs
-        calculate_accel_on_particle!(w, i)
+    if !use_brute_force
+        for i in ixs
+            calculate_accel_on_particle!(w, i)
+        end
+    else
+        calc_accel_brute_force!(w, ixs)
     end
 
     ax_tree = w.ax[ixs]

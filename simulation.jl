@@ -27,7 +27,7 @@ function drift!(w::World; dt=0.0)
     end
 end
 
-function exec!(sim::Simulation)
+function exec!(sim::Simulation; use_brute_force=false)
     reset!(sim)
     tic()
     calc_accel!(sim.w)
@@ -46,7 +46,11 @@ function exec!(sim::Simulation)
 
         kick!(sim.w, dt=sim.dt/2)
         drift!(sim.w, dt=sim.dt)
-        calc_accel!(sim.w)
+        if !use_brute_force
+            calc_accel!(sim.w)
+        else
+            calc_accel_brute_force!(sim.w)
+        end
         kick!(sim.w, dt=sim.dt/2)
 
         sim.t += sim.dt
