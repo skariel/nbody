@@ -7,7 +7,8 @@ include("types.jl")
 include("simulation.jl")
 include("forces.jl")
 include("realizations.jl")
-include("test.jl")
 include("plotting.jl")
+include("backdynamics.jl")
+include("test.jl")
 
 end # module

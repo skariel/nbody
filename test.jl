@@ -244,8 +244,37 @@ function test()
         end
 
     end
-
-    println("*** All tests passed! ***")
 end
 
 test()
+
+function test_backdynamics()
+    sim = Simulation(worldnormal(500, smth=0.01, opening_alpha=0.5),
+                limit_by_steps=true, stepc=10)
+
+    op_i = sim.w.particles[1]
+
+    hist = exec!(sim, silent=true, accumulate_history=true)
+
+    op_f = sim.w.particles[1]
+
+    odx = op_f._x - op_i._x
+    ody = op_f._y - op_i._y
+    odz = op_f._z - op_i._z
+    org_d = sqrt(odx*odx+ody*ody+odz*odz)
+
+    np_f = exec(op_i, hist)
+    ndx = np_f._x - op_i._x
+    ndy = np_f._y - op_i._y
+    ndz = np_f._z - op_i._z
+
+    dx = ndx - odx
+    dy = ndy - ody
+    dz = ndz - odz
+    d = sqrt(dx*dx+dy*dy+dz*dz)
+
+    err= d/org_d*100.0
+    @test err==0.0
+end
+
+test_backdynamics()

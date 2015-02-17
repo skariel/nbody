@@ -27,21 +27,26 @@ function drift!(w::World; dt=0.0)
     end
 end
 
-function exec!(sim::Simulation; use_brute_force=false)
+function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_history=false)
     reset!(sim)
     tic()
     calc_accel!(sim.w)
     break_time = false
+    hist = History(OctTree{Particle}[], Float64[], sim.w)
     while true
         sim.step += 1
         sim.dt = calc_dt(sim.w)
+        if accumulate_history
+            push!(hist.tree, deepcopy(sim.w.tree))
+            push!(hist.dt, sim.dt)
+        end
         if !sim.limit_by_steps
             if sim.t+sim.dt > sim.tf
                 sim.dt = sim.tf - sim.t
                 break_time = true
             end
         end
-        print("s=",sim.step," t=",sim.t," dt=",sim.dt)
+        !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
         tic()
 
         kick!(sim.w, dt=sim.dt/2)
@@ -55,12 +60,16 @@ function exec!(sim::Simulation; use_brute_force=false)
 
         sim.t += sim.dt
         elapsed = toq()
-        print(" /",elapsed,"s\n")
+        !silent && print(" /",elapsed,"s\n")
 
         sim.limit_by_steps && sim.step >= sim.stepf && break
         break_time && break
     end
-    println("\n--- Done!\n")
-    toc()
-    nothing
+    if accumulate_history
+        push!(hist.tree, deepcopy(sim.w.tree))
+        push!(hist.dt, sim.dt)
+    end
+    !silent && println("\n--- Done!\n")
+    silent? toq() : toc()
+    hist
 end

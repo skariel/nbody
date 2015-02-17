@@ -103,6 +103,12 @@ end
     return true
 end
 
+@inline function calc_accel(p::Particle, tree::OctTree{Particle}, w::World)
+    @inbounds data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,p._x,p._y,p._z,w)
+    map(tree, data)
+    data.ax, data.ay, data.az
+end
+
 @inline function calculate_accel_on_particle!(w::World, particle_ix::Int64)
     @inbounds const p = w.particles[particle_ix]
     @inbounds data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,p._x,p._y,p._z,w)

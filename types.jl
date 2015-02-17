@@ -77,3 +77,9 @@ function reset!(s::Simulation)
     s.step = 0
     s.t = s.ti
 end
+
+type History
+    tree::Array{OctTree{Particle}, 1}
+    dt::Array{Float64, 1}
+    w::World
+end
