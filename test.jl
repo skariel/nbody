@@ -244,6 +244,71 @@ function test()
         end
 
     end
+
+    #########################################################
+    #
+    #   Testing compiled trees
+    #
+    #########################################################
+
+    w = worldnormal(10000)
+    buildtree(w)
+
+    ct = CompiledTree(10000)
+    compile(ct, w.tree)
+
+    # testing total number of particles and their mass
+    total_mass = 0.0
+    total_number_of_particles = 0
+    for i in 1:ct.nodes_used
+        ct.tree[i].l > 0.0 && continue # not a leaf
+        total_number_of_particles += 1
+        total_mass += ct.tree[i].m
+        @test_approx_eq ct.tree[i].m 1.0/10000
+    end
+    @test total_number_of_particles == 10000
+    @test_approx_eq total_mass 1.0
+
+    for i in 1:w.tree.number_of_nodes_used
+        @inbounds n = w.tree.nodes[i]
+        if isemptyleaf(n)
+            @test n.id <= 0
+            continue
+         end
+        @test n.id > 0
+        @test n.id <= ct.nodes_used
+        @test n.point._m == ct.tree[n.id].m
+        @test n.point._x == ct.tree[n.id].cm_x
+        @test n.point._y == ct.tree[n.id].cm_y
+        @test n.point._z == ct.tree[n.id].cm_z
+        if isleaf(n)
+            @test ct.tree[n.id].l == -1.0
+        else
+            @test 2.0*n.r == ct.tree[n.id].l
+        end
+    end
+
+    v=zeros(Int64, ct.nodes_used)
+    for i in 1:w.tree.number_of_nodes_used
+        if w.tree.nodes[i].id>0
+            v[w.tree.nodes[i].id] = 1
+        end
+    end
+    @test sum(v) == ct.nodes_used
+
+    for i in 1:w.tree.number_of_nodes_used
+        n = w.tree.nodes[i]
+        !n.is_divided && continue
+
+        !isemptyleaf(n.lxlylz) && @test ct.tree[n.lxlylz.id].next == -1
+
+        !isemptyleaf(n.lxlylz) && !isemptyleaf(n.lxlyhz) &&
+            @test ct.tree[n.lxlyhz.id].next == n.lxlylz.id
+        !isemptyleaf(n.hxlyhz) && !isemptyleaf(n.hxlylz) &&
+            @test ct.tree[n.hxlyhz.id].next == n.hxlylz.id
+        !isemptyleaf(n.hxhyhz) && !isemptyleaf(n.hxhylz) &&
+            @test ct.tree[n.hxhyhz.id].next == n.hxhylz.id
+    end
 end
 
 test()

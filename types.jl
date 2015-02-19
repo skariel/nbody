@@ -83,3 +83,5 @@ type History
     dt::Array{Float64, 1}
     w::World
 end
+
+immutable Compile end

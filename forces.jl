@@ -64,7 +64,6 @@ end
         const dz2 = dz*dz
         const dr2 = dx2+dy2+dz2+data.w.smth2
         const dr = sqrt(dr2)
-        #const denom = (dx2+dy2+dz2+data.w.smth2)^1.5/q.point._m
         const denom = dr2*dr/q.point._m
         data.ax += dx/denom
         data.ay += dy/denom
@@ -96,7 +95,6 @@ end
     const dr2 = r2+data.w.smth2
     const dr = sqrt(dr2)
     const denom = dr2*dr/q.point._m
-    #const denom = (r2+data.w.smth2)^1.5/q.point._m
     data.ax += dx/denom
     data.ay += dy/denom
     data.az += dz/denom
@@ -130,6 +128,79 @@ function calc_accel!(w::World)
         data.py = p._y
         data.pz = p._z
         map(w.tree, data)
+        @inbounds w.ax[i] = data.ax
+        @inbounds w.ay[i] = data.ay
+        @inbounds w.az[i] = data.az
+    end
+end
+
+#################################################################
+#
+#  Forces on compiled trees
+#
+#################################################################
+
+@inline function stop_cond(q::CompiledTreeNode, data::DataToCalculateAccelOnParticle)
+    if q.l < 0
+        # this is a leaf
+        # we have a single particle in the node
+        q.cm_x == data.px &&
+        q.cm_y == data.py &&
+        q.cm_z == data.pz && return true
+        const dx = q.cm_x - data.px
+        const dx2 = dx*dx
+        const dy = q.cm_y - data.py
+        const dy2 = dy*dy
+        const dz = q.cm_z - data.pz
+        const dz2 = dz*dz
+        const dr2 = dx2+dy2+dz2+data.w.smth2
+        const dr = sqrt(dr2)
+        const denom = dr2*dr/q.m
+        data.ax += dx/denom
+        data.ay += dy/denom
+        data.az += dz/denom
+        return true
+    end
+
+    # here q is divided. Check we are not too close to the cell
+    const l2 = q.l*q.l
+    const dx = q.cm_x - data.px
+    const dx2 = dx*dx
+    const dy = q.cm_y - data.py
+    const dy2 = dy*dy
+    const dz = q.cm_z - data.pz
+    const dz2 = dz*dz
+    const r2 = dx2 + dy2 + dz2
+    l2/r2 > data.w.opening_alpha2 && return false # we need to further open the node
+
+    # consider the node, no further need to open it
+    const dr2 = r2+data.w.smth2
+    const dr = sqrt(dr2)
+    const denom = dr2*dr/q.m
+    data.ax += dx/denom
+    data.ay += dy/denom
+    data.az += dz/denom
+    return true
+end
+
+function calc_accel!(w::World, ::Type{Compile})
+    ct = CompiledTree(w.n)
+    calc_accel!(w, Compile, ct)
+end
+
+function calc_accel!(w::World, ::Type{Compile}, ct::CompiledTree)
+    buildtree(w)
+    compile(ct, w.tree)
+    data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
+    @inbounds for i in 1:w.n
+        const p = w.particles[i]
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.px = p._x
+        data.py = p._y
+        data.pz = p._z
+        map(ct, data)
         @inbounds w.ax[i] = data.ax
         @inbounds w.ay[i] = data.ay
         @inbounds w.az[i] = data.az
