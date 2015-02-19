@@ -11,6 +11,7 @@ include("forces.jl")
 include("realizations.jl")
 include("plotting.jl")
 include("backdynamics.jl")
+include("compiletree.jl")
 include("test.jl")
 
 end # module
