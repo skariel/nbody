@@ -1,25 +1,3 @@
-immutable CompiledTreeNode
-    cm_x::Float64
-    cm_y::Float64
-    cm_z::Float64
-    m::Float64
-    l::Float64
-    next::Int64
-end
-@inline withnext(cn::CompiledTreeNode, next::Int64) =
-    CompiledTreeNode(cn.cm_x, cn.cm_y, cn.cm_z, cn.m, cn.l, next)
-
-type CompiledTree
-    tree::Array{CompiledTreeNode, 1}
-    nodes_used::Int64
-    faststack::Array{Int64, 1}
-    CompiledTree(n::Int) = new(Array(CompiledTreeNode, 2*n), 0, Array(Int64, 10000))
-end
-
-@inline CompiledTreeNode(n::OctTreeNode{Particle}, ct::CompiledTree) =
-        CompiledTreeNode(n.point._x, n.point._y, n.point._z,
-            n.point._m, isleaf(n) ? -1.0 : 2.0*n.r, -1)
-
 @inline function stop_cond(q::OctTreeNode{Particle}, ct::CompiledTree)
     isemptyleaf(q) && return true # empty node, nothing to do
     ct.nodes_used += 1
