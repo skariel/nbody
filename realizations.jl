@@ -1,7 +1,7 @@
-function World(particles::Array{Particle, 1}, smth, opening_excluded_frac, opening_alpha, dtfrac)
+function World(particles::Array{Particle, 1}, smth, opening_alpha, dtfrac)
     n = length(particles)
     World(
-        OctTree(Particle; n=trunc(Integer,4.1*n)),
+        CompiledOctTree(int(1.8*n), Particle),
         particles,
         zeros(n),
         zeros(n),
@@ -11,7 +11,6 @@ function World(particles::Array{Particle, 1}, smth, opening_excluded_frac, openi
         zeros(n),
         n,
         opening_alpha^2,
-        opening_excluded_frac^2,
         smth*smth,
         dtfrac
     )
@@ -32,11 +31,11 @@ function particlesspherical(n::Int64)
     hilbertsort!(particles)
 end
 
-world(particles::Array{Particle, 1}; smth=0.01, opening_excluded_frac=0.6, opening_alpha=0.7, dtfrac=0.035) =
-    World(particles, smth, opening_excluded_frac, opening_alpha, dtfrac)
+world(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
+    World(particles, smth, opening_alpha, dtfrac)
 
-worldnormal(n::Int64; smth=0.01, opening_excluded_frac=0.6, opening_alpha=0.7, dtfrac=0.035) =
-    World(particlesnormal(n), smth, opening_excluded_frac, opening_alpha, dtfrac)
+worldnormal(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
+    World(particlesnormal(n), smth, opening_alpha, dtfrac)
 
-worldspherical(n::Int64; smth=0.01, opening_excluded_frac=0.6, opening_alpha=0.7, dtfrac=0.035) =
-    World(particlesspherical(n), smth, opening_excluded_frac, opening_alpha, dtfrac)
+worldspherical(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
+    World(particlesspherical(n), smth, opening_alpha, dtfrac)

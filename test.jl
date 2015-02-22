@@ -2,7 +2,7 @@ using Base.Test
 
 function calc_accel_brute_force!(w::World, ixs=1:w.n)
     ax,ay,az = calc_accel_brute_force(w, 1:w.n)
-    @inbounds for i in ixs
+    for i in ixs
         w.ax[i] = ax[i]
         w.ay[i] = ay[i]
         w.az[i] = az[i]
@@ -14,10 +14,10 @@ function calc_accel_brute_force(w::World, ixs=1:w.n)
     ay = zeros(w.n)
     az = zeros(w.n)
     for i in ixs
-        @inbounds p_i = w.particles[i]
+        p_i = w.particles[i]
         for j in 1:w.n
             i==j && continue
-            @inbounds pj = w.particles[j]
+            pj = w.particles[j]
             const dx = pj._x - p_i._x
             const dy = pj._y - p_i._y
             const dz = pj._z - p_i._z
@@ -28,9 +28,9 @@ function calc_accel_brute_force(w::World, ixs=1:w.n)
             const r22 = r2+w.smth2
             const r21 = sqrt(r22)
             const denom = r22*r21/p_i._m
-            @inbounds ax[i] += dx/denom
-            @inbounds ay[i] += dy/denom
-            @inbounds az[i] += dz/denom
+            ax[i] += dx/denom
+            ay[i] += dy/denom
+            az[i] += dz/denom
         end
     end
     ax[ixs],ay[ixs],az[ixs]
@@ -39,9 +39,9 @@ end
 function calc_k_energy(w::World, ixs=1:w.n)
     k = 0.0
     @simd for i in 1:w.n
-        @inbounds vx = w.vx[i]
-        @inbounds vy = w.vy[i]
-        @inbounds k += vx*vx+vy*vy
+        vx = w.vx[i]
+        vy = w.vy[i]
+        k += vx*vx+vy*vy
     end
     0.5*w.particles[1]._m*k
 end
@@ -49,10 +49,10 @@ end
 function calc_p_energy(w::World)
     p = 0.0
     for i in 1:w.n
-        @inbounds p_i = w.particles[i]
+        p_i = w.particles[i]
         for j in 1:w.n
             i==j && continue
-            @inbounds pj = w.particles[j]
+            pj = w.particles[j]
             const dx = pj._x - p_i._x
             const dy = pj._y - p_i._y
             const dz = pj._z - p_i._z
@@ -86,7 +86,7 @@ function test_acc(n, nout; smth=0.01, opening_alpha=0.7, tp=:spherical, use_brut
     else
         w = worldnormal(n, smth=smth, opening_alpha=opening_alpha)
     end
-    buildtree(w)
+    buildtree!(w, createtree(w))
 
     if !use_brute_force
         for i in ixs
@@ -123,196 +123,6 @@ function test_acc(n, nout; smth=0.01, opening_alpha=0.7, tp=:spherical, use_brut
         )
 end
 
-function test()
-    w = worldnormal(10000)
-    buildtree(w)
-
-    #testing all points are insize tree boundaries:
-    for p in w.particles
-        @test p._x > w.tree.head.midx - w.tree.head.r
-        @test p._x < w.tree.head.midx + w.tree.head.r
-        @test p._y > w.tree.head.midy - w.tree.head.r
-        @test p._y < w.tree.head.midy + w.tree.head.r
-        @test p._z > w.tree.head.midz - w.tree.head.r
-        @test p._z < w.tree.head.midz + w.tree.head.r
-    end
-
-    # testing number of full leafs
-    tot_not_empty = 0
-    tot_massive_leafs = 0
-    for n in w.tree.nodes
-        if isfullleaf(n)
-            tot_not_empty += 1
-        end
-        if n.point._m > 1.e-13 && isleaf(n)
-            tot_massive_leafs += 1
-        end
-    end
-    @test tot_not_empty == w.n
-    @test tot_massive_leafs == w.n
-
-    total_mass = 0.0
-    for n in w.tree.nodes[1:w.tree.number_of_nodes_used]
-        if !n.is_empty
-            total_mass += n.point._m
-        end
-    end
-    @test_approx_eq_eps total_mass 1.0 1.e-4
-
-    # testing tree construction
-    for n in w.tree.nodes
-
-        # testing children radius is 0.5*r
-        if n.is_divided
-            @test_approx_eq n.r/2 n.lxlylz.r
-            @test_approx_eq n.r/2 n.lxlyhz.r
-            @test_approx_eq n.r/2 n.lxhylz.r
-            @test_approx_eq n.r/2 n.lxhyhz.r
-            @test_approx_eq n.r/2 n.hxlylz.r
-            @test_approx_eq n.r/2 n.hxlyhz.r
-            @test_approx_eq n.r/2 n.hxhylz.r
-            @test_approx_eq n.r/2 n.hxhyhz.r
-        end
-
-        # testing mass in children is mass in parent
-        if n.is_divided
-            parent_mass = n.point._m
-            children_mass =
-                n.lxlylz.point._m  +
-                n.lxlyhz.point._m  +
-                n.lxhylz.point._m  +
-                n.lxhyhz.point._m  +
-                n.hxlylz.point._m  +
-                n.hxlyhz.point._m  +
-                n.hxhylz.point._m  +
-                n.hxhyhz.point._m
-            @test_approx_eq_eps parent_mass children_mass 1.e-4
-        end
-
-        # testing all divided nodes are empty
-        if n.is_divided
-            @test n.is_empty
-            @test !isleaf(n)
-            @test !isemptyleaf(n)
-            @test !isfullleaf(n)
-        else
-            @test isleaf(n)
-            if isfullleaf(n)
-                @test isfullleaf(n)
-            end
-        end
-
-        # testing center of mass in children builds com in parent
-        if n.is_divided
-            parent_x = n.point._x
-            parent_y = n.point._y
-            parent_z = n.point._z
-            children_x = (
-                n.lxlylz.point._x*n.lxlylz.point._m  +
-                n.lxlyhz.point._x*n.lxlyhz.point._m  +
-                n.lxhylz.point._x*n.lxhylz.point._m  +
-                n.lxhyhz.point._x*n.lxhyhz.point._m  +
-                n.hxlylz.point._x*n.hxlylz.point._m  +
-                n.hxlyhz.point._x*n.hxlyhz.point._m  +
-                n.hxhylz.point._x*n.hxhylz.point._m  +
-                n.hxhyhz.point._x*n.hxhyhz.point._m
-                )/n.point._m
-            children_y = (
-                n.lxlylz.point._y*n.lxlylz.point._m  +
-                n.lxlyhz.point._y*n.lxlyhz.point._m  +
-                n.lxhylz.point._y*n.lxhylz.point._m  +
-                n.lxhyhz.point._y*n.lxhyhz.point._m  +
-                n.hxlylz.point._y*n.hxlylz.point._m  +
-                n.hxlyhz.point._y*n.hxlyhz.point._m  +
-                n.hxhylz.point._y*n.hxhylz.point._m  +
-                n.hxhyhz.point._y*n.hxhyhz.point._m
-                )/n.point._m
-            children_z = (
-                n.lxlylz.point._z*n.lxlylz.point._m  +
-                n.lxlyhz.point._z*n.lxlyhz.point._m  +
-                n.lxhylz.point._z*n.lxhylz.point._m  +
-                n.lxhyhz.point._z*n.lxhyhz.point._m  +
-                n.hxlylz.point._z*n.hxlylz.point._m  +
-                n.hxlyhz.point._z*n.hxlyhz.point._m  +
-                n.hxhylz.point._z*n.hxhylz.point._m  +
-                n.hxhyhz.point._z*n.hxhyhz.point._m
-                )/n.point._m
-            @test_approx_eq_eps parent_x children_x 1.e-4
-            @test_approx_eq_eps parent_y children_y 1.e-4
-            @test_approx_eq_eps parent_z children_z 1.e-4
-
-        end
-
-    end
-
-    #########################################################
-    #
-    #   Testing compiled trees
-    #
-    #########################################################
-
-    w = worldnormal(10000)
-    buildtree(w)
-
-    ct = CompiledTree(10000)
-    compile(ct, w.tree)
-
-    # testing total number of particles and their mass
-    total_mass = 0.0
-    total_number_of_particles = 0
-    for i in 1:ct.nodes_used
-        ct.tree[i].l > 0.0 && continue # not a leaf
-        total_number_of_particles += 1
-        total_mass += ct.tree[i].m
-        @test_approx_eq ct.tree[i].m 1.0/10000
-    end
-    @test total_number_of_particles == 10000
-    @test_approx_eq total_mass 1.0
-
-    for i in 1:w.tree.number_of_nodes_used
-        @inbounds n = w.tree.nodes[i]
-        if isemptyleaf(n)
-            @test n.id <= 0
-            continue
-         end
-        @test n.id > 0
-        @test n.id <= ct.nodes_used
-        @test n.point._m == ct.tree[n.id].m
-        @test n.point._x == ct.tree[n.id].cm_x
-        @test n.point._y == ct.tree[n.id].cm_y
-        @test n.point._z == ct.tree[n.id].cm_z
-        if isleaf(n)
-            @test ct.tree[n.id].l == -1.0
-        else
-            @test 2.0*n.r == ct.tree[n.id].l
-        end
-    end
-
-    v=zeros(Int64, ct.nodes_used)
-    for i in 1:w.tree.number_of_nodes_used
-        if w.tree.nodes[i].id>0
-            v[w.tree.nodes[i].id] = 1
-        end
-    end
-    @test sum(v) == ct.nodes_used
-
-    for i in 1:w.tree.number_of_nodes_used
-        n = w.tree.nodes[i]
-        !n.is_divided && continue
-
-        !isemptyleaf(n.lxlylz) && @test ct.tree[n.lxlylz.id].next == -1
-
-        !isemptyleaf(n.lxlylz) && !isemptyleaf(n.lxlyhz) &&
-            @test ct.tree[n.lxlyhz.id].next == n.lxlylz.id
-        !isemptyleaf(n.hxlyhz) && !isemptyleaf(n.hxlylz) &&
-            @test ct.tree[n.hxlyhz.id].next == n.hxlylz.id
-        !isemptyleaf(n.hxhyhz) && !isemptyleaf(n.hxhylz) &&
-            @test ct.tree[n.hxhyhz.id].next == n.hxhylz.id
-    end
-end
-
-test()
-
 function test_backdynamics()
     sim = Simulation(worldnormal(500, smth=0.01, opening_alpha=0.5),
                 limit_by_steps=true, stepc=10)
@@ -342,4 +152,4 @@ function test_backdynamics()
     @test err==0.0
 end
 
-test_backdynamics()
+#test_backdynamics()

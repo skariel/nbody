@@ -1,6 +1,6 @@
 function calc_dt(w::World)
     mindt2 = 1.e30 # infinity, ha!
-    @inbounds for i in 1:w.n
+    @inline for i in 1:w.n
         const a2 = w.ax[i]*w.ax[i] + w.ay[i]*w.ay[i]
         const dyn_dt2 = sqrt(w.smth2/a2)*w.dtfrac*w.dtfrac
         if dyn_dt2 < mindt2
@@ -11,7 +11,7 @@ function calc_dt(w::World)
 end
 
 function kick!(w::World; dt=0.0)
-    @inbounds for i in 1:w.n
+    @inline for i in 1:w.n
         w.vx[i] += w.ax[i]*dt
         w.vy[i] += w.ay[i]*dt
         w.vz[i] += w.az[i]*dt
@@ -19,7 +19,7 @@ function kick!(w::World; dt=0.0)
 end
 
 function drift!(w::World; dt=0.0)
-    @inbounds for i in 1:w.n
+    @inline for i in 1:w.n
         const dx = w.vx[i]*dt
         const dy = w.vy[i]*dt
         const dz = w.vz[i]*dt
@@ -27,12 +27,18 @@ function drift!(w::World; dt=0.0)
     end
 end
 
+# TODO: make this parallel!
+function calc_accel!(sim::Simulation)
+    buildtree!(sim.w, sim.tree)
+    calc_accel!(sim.w)
+end
+
 function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_history=false)
     reset!(sim)
     tic()
-    calc_accel!(sim.w)
+    calc_accel!(sim)
     break_time = false
-    hist = History(OctTree{Particle}[], Float64[], sim.w)
+    hist = History(CompiledOctTree{Particle}[], Float64[], sim.w)
     while true
         sim.step += 1
         sim.dt = calc_dt(sim.w)
@@ -52,9 +58,9 @@ function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_
         kick!(sim.w, dt=sim.dt/2)
         drift!(sim.w, dt=sim.dt)
         if !use_brute_force
-            calc_accel!(sim.w)
+            calc_accel!(sim)
         else
-            calc_accel_brute_force!(sim.w)
+            calc_accel_brute_force!(sim)
         end
         kick!(sim.w, dt=sim.dt/2)
 

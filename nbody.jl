@@ -7,7 +7,6 @@ using GeometricalPredicates
 
 include("types.jl")
 include("simulation.jl")
-include("compiletree.jl")
 include("forces.jl")
 include("realizations.jl")
 include("plotting.jl")
