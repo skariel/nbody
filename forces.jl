@@ -64,7 +64,7 @@ end
     const dy2 = dy*dy
     const dz2 = dz*dz
     const dr2 = dx2 + dy2 + dz2
-    
+
     q.l > 0 && q.l*q.l/dr2 > data.w.opening_alpha2 && return false # we need to further open the node
 
     const smthdr2 = dr2+data.w.smth2
@@ -92,9 +92,10 @@ function calculate_accel_on_particle!(w::World, i::Int64)
     nothing
 end
 
-function calc_accel!(w::World)
+function calc_accel!(w::World, rng::UnitRange{Int64})
+    @show rng
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
-    @inbounds for i in 1:w.n
+    @inbounds for i in rng
         const p = w.particles[i]
         data.ax = 0.0
         data.ay = 0.0
@@ -108,4 +109,19 @@ function calc_accel!(w::World)
         w.az[i] = data.az
     end
     nothing
+end
+
+function get_chunks(n::Int64)
+    chunks_i = int(linspace(1,n,1+length(workers())))
+    chunks_f = chunks_i[2:end]
+    chunks_f[1:end-1] -= 1
+    chunks_i = chunks_i[1:end-1]
+    [chunks_i[i]:chunks_f[i] for i in 1:length(chunks_i)]
+end
+
+function calc_accel!(w::World)
+    chunks = get_chunks(w.n)
+    @sync for i in 1:length(workers())
+        @async remotecall_wait(workers()[i], calc_accel!, w, chunks[i])
+    end
 end
