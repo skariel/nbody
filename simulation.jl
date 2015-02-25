@@ -33,18 +33,22 @@ function calc_accel!(sim::Simulation)
     calc_accel!(sim.w)
 end
 
-function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_history=false)
+function exec!(sim::Simulation, hist::History; use_brute_force=false, silent=false, accumulate_history=false)
     reset!(sim)
     tic()
     calc_accel!(sim)
     break_time = false
-    hist = History(CompiledOctTree{Particle}[], Float64[], sim.w)
     while true
         sim.step += 1
         sim.dt = calc_dt(sim.w)
         if accumulate_history
-            push!(hist.tree, deepcopy(sim.w.tree))
-            push!(hist.dt, sim.dt)
+            if length(hist.tree) < sim.step
+                push!(hist.tree, deepcopy(sim.w.tree))
+                push!(hist.dt, sim.dt)
+            else
+                @inbounds hist.tree[sim.step] = deepcopy(sim.w.tree)
+                @inbounds hist.dt[sim.step] = sim.dt
+            end
         end
         if !sim.limit_by_steps
             if sim.t+sim.dt > sim.tf
@@ -72,10 +76,21 @@ function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_
         break_time && break
     end
     if accumulate_history
-        push!(hist.tree, deepcopy(sim.w.tree))
-        push!(hist.dt, sim.dt)
+        if length(hist.tree) < sim.step+1
+            push!(hist.tree, deepcopy(sim.w.tree))
+            push!(hist.dt, sim.dt)
+        else
+            @inbounds hist.tree[sim.step+1] = deepcopy(sim.w.tree)
+            @inbounds hist.dt[sim.step+1] = sim.dt
+        end
     end
+    hist.steps = sim.step
     !silent && println("\n--- Done!\n")
     silent? toq() : toc()
     hist
+end
+
+function exec!(sim::Simulation; use_brute_force=false, silent=false, accumulate_history=false)
+    hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
+    exec!(sim, hist; use_brute_force=use_brute_force, silent=silent, accumulate_history=accumulate_history)
 end

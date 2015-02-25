@@ -1,14 +1,26 @@
 function World(particles::Array{Particle, 1}, smth, opening_alpha, dtfrac)
     n = length(particles)
+    spar = SharedArray(Particle, n)
+    vx = SharedArray(Float64, n)
+    vy = SharedArray(Float64, n)
+    vz = SharedArray(Float64, n)
+    ax = SharedArray(Float64, n)
+    ay = SharedArray(Float64, n)
+    az = SharedArray(Float64, n)
+
+    for i in 1:n
+        @inbounds spar[i] = particles[i]
+        @inbounds vx[i] = 0.0
+        @inbounds vy[i] = 0.0
+        @inbounds vz[i] = 0.0
+        @inbounds ax[i] = 0.0
+        @inbounds ay[i] = 0.0
+        @inbounds az[i] = 0.0
+    end
     World(
         CompiledOctTree(int(1.8*n), Particle),
-        particles,
-        zeros(n),
-        zeros(n),
-        zeros(n),
-        zeros(n),
-        zeros(n),
-        zeros(n),
+        spar,
+        vx,vy,vz,ax,ay,az,
         n,
         opening_alpha^2,
         smth*smth,

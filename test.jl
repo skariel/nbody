@@ -152,4 +152,4 @@ function test_backdynamics()
     @test err==0.0
 end
 
-#test_backdynamics()
+test_backdynamics()

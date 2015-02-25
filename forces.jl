@@ -7,7 +7,7 @@
     nothing
 end
 
-@inline createtree(w::World) = OctTree(Particle; n=w.n)
+@inline createtree(w::World) = OctTree(Particle; n=int(3.9*w.n))
 
 function buildtree!(w::World, tree::OctTree{Particle})
     clear!(tree)
@@ -93,7 +93,6 @@ function calculate_accel_on_particle!(w::World, i::Int64)
 end
 
 function calc_accel!(w::World, rng::UnitRange{Int64})
-    @show rng
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     @inbounds for i in rng
         const p = w.particles[i]
@@ -111,12 +110,16 @@ function calc_accel!(w::World, rng::UnitRange{Int64})
     nothing
 end
 
-function get_chunks(n::Int64)
-    chunks_i = int(linspace(1,n,1+length(workers())))
-    chunks_f = chunks_i[2:end]
-    chunks_f[1:end-1] -= 1
-    chunks_i = chunks_i[1:end-1]
-    [chunks_i[i]:chunks_f[i] for i in 1:length(chunks_i)]
+function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World)
+    data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
+    data.ax = 0.0
+    data.ay = 0.0
+    data.az = 0.0
+    data.px = p._x
+    data.py = p._y
+    data.pz = p._z
+    map(tree, data)
+    data.ax, data.ay, data.az
 end
 
 function calc_accel!(w::World)

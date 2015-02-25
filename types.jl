@@ -13,7 +13,7 @@ addxyz(p::Particle, dx::Float64, dy::Float64, dz::Float64) = Particle(p._x+dx,p.
 
 type World
     tree::CompiledOctTree{Particle}
-    particles::Array{Particle, 1}
+    particles::SharedArray{Particle, 1}
     vx::SharedArray{Float64, 1}
     vy::SharedArray{Float64, 1}
     vz::SharedArray{Float64, 1}
@@ -47,19 +47,18 @@ end
 function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
     xi = SharedArray(Float64, w.n)
     yi = SharedArray(Float64, w.n)
-    zi = SharedArray(Float64, w.n)
+    zx = SharedArray(Float64, w.n)
     vxi = SharedArray(Float64, w.n)
     vyi = SharedArray(Float64, w.n)
     vzi = SharedArray(Float64, w.n)
     for i in 1:w.n
-        xi[i] = w.particles[i]._x
-        yi[i] = w.particles[i]._y
-        zi[i] = w.particles[i]._z
-        vxi[i] = 0.0
-        vyi[i] = 0.0
-        vzi[i] = 0.0
+        @inbounds xi[i] = w.particles[i]._x
+        @inbounds yi[i] = w.particles[i]._y
+        @inbounds zi[i] = w.particles[i]._z
+        @inbounds vxi[i] = 0.0
+        @inbounds vyi[i] = 0.0
+        @inbounds vzi[i] = 0.0
     end
-
     Simulation(
         createtree(w),
         w,
@@ -94,4 +93,33 @@ type History
     tree::Array{CompiledOctTree{Particle}, 1}
     dt::Array{Float64, 1}
     w::World
+    steps::Int64
+end
+
+type Optimization
+    history::History
+    x0::SharedArray{FLoat64,1}
+    y0::SharedArray{FLoat64,1}
+    z0::SharedArray{FLoat64,1}
+    gx::SharedArray{FLoat64,1}
+    gy::SharedArray{FLoat64,1}
+    gz::SharedArray{FLoat64,1}
+    function Optimization(sim::Simulation)
+        hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
+        x0 = SharedArray(Float64, sim.w.n)
+        y0 = SharedArray(Float64, sim.w.n)
+        z0 = SharedArray(Float64, sim.w.n)
+        gx = SharedArray(Float64, sim.w.n)
+        gy = SharedArray(Float64, sim.w.n)
+        gz = SharedArray(Float64, sim.w.n)
+        for i in 1:sim.w.n
+            @inbounds x0[i] = sim.xi[i]
+            @inbounds y0[i] = sim.yi[i]
+            @inbounds z0[i] = sim.zi[i]
+            @inbounds gx[i] = 0.0
+            @inbounds gy[i] = 0.0
+            @inbounds gz[i] = 0.0
+        end
+        new(hist, x0,y0,z0, gx,gy,gz)
+    end
 end
