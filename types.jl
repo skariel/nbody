@@ -5,6 +5,7 @@ immutable Particle <: AbstractPoint3D
     _m::Float64
 end
 Particle() = Particle(0., 0., 0., 0.)
+Particle(x::Float64, y::Float64, z::Float64) = Particle(x,y,z,0.0)
 getx(p::Particle) = p._x
 gety(p::Particle) = p._y
 getz(p::Particle) = p._z
@@ -47,7 +48,7 @@ end
 function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
     xi = SharedArray(Float64, w.n)
     yi = SharedArray(Float64, w.n)
-    zx = SharedArray(Float64, w.n)
+    zi = SharedArray(Float64, w.n)
     vxi = SharedArray(Float64, w.n)
     vyi = SharedArray(Float64, w.n)
     vzi = SharedArray(Float64, w.n)
@@ -98,12 +99,12 @@ end
 
 type Optimization
     history::History
-    x0::SharedArray{FLoat64,1}
-    y0::SharedArray{FLoat64,1}
-    z0::SharedArray{FLoat64,1}
-    gx::SharedArray{FLoat64,1}
-    gy::SharedArray{FLoat64,1}
-    gz::SharedArray{FLoat64,1}
+    x0::SharedArray{Float64,1}
+    y0::SharedArray{Float64,1}
+    z0::SharedArray{Float64,1}
+    gx::SharedArray{Float64,1}
+    gy::SharedArray{Float64,1}
+    gz::SharedArray{Float64,1}
     function Optimization(sim::Simulation)
         hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
         x0 = SharedArray(Float64, sim.w.n)

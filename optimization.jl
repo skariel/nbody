@@ -1,3 +1,8 @@
+function exec!(sim::Simulation, opt::Optimization; use_brute_force=false, silent=false, accumulate_history=false)
+    hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
+    opt.history = exec!(sim, hist; use_brute_force=use_brute_force, silent=silent, accumulate_history=accumulate_history)
+end
+
 function exec(p::Particle, hist::History)
     vx = 0.0
     vy = 0.0
@@ -35,17 +40,17 @@ end
 function grade(sim::Simulation, opt::Optimization)
     g = 0.0
     @inbounds for i in 1:sim.w.n
-        g += grade(sim.w.pf[i], Particle(opt.x0[i], opt.y0[i], opy.z0[i]))
+        g += grade(sim.w.particles[i], Particle(opt.x0[i], opt.y0[i], opt.z0[i]))
     end
     g
 end
 
 @inline function grad(pi::Particle, p0::Particle, pf::Particle, hist::History)
-    const D = 1.e-6
+    const D = 1.e-7
 
-    const new_p_x = exec(addxyz(pi,  D,0.0,0.0), opt.hist)
-    const new_p_y = exec(addxyz(pi,0.0,  D,0.0), opt.hist)
-    const new_p_z = exec(addxyz(pi,0.0,0.0,  D), opt.hist)
+    const new_p_x = exec(addxyz(pi,  D,0.0,0.0), hist)
+    const new_p_y = exec(addxyz(pi,0.0,  D,0.0), hist)
+    const new_p_z = exec(addxyz(pi,0.0,0.0,  D), hist)
 
     const org_grade = grade(pf, p0)
     const x_grade = grade(new_p_x, p0)
@@ -55,18 +60,21 @@ end
     (x_grade-org_grade)/D, (y_grade-org_grade)/D, (z_grade-org_grade)/D
 end
 
-function grad!(rng::UnitRange{Int64}, opt::Optimization, sim::Simulation)
+function grad!(rng::UnitRange{Int64}, opt::Optimization,
+    xi::SharedArray{Float64,1},
+    yi::SharedArray{Float64,1},
+    zi::SharedArray{Float64,1},
+    pf::SharedArray{Particle,1})
     for i in rng
-        @inbounds pi = Particle(sim.xi[i]. sim.yi[i], sim.zi[i])
-        @inbounds p0 = Particle(opt.x0[i]. opt.y0[i], opt.z0[i])
-        @inbounds pf = sim.w.pf[i]
-        @inbounds opt.gx[i], opt.gy[i], opt.gz[i] = grad(pi, p0, pf, hist)
+        @inbounds pi = Particle(xi[i], yi[i], zi[i])
+        @inbounds p0 = Particle(opt.x0[i], opt.y0[i], opt.z0[i])
+        @inbounds opt.gx[i], opt.gy[i], opt.gz[i] = grad(pi, p0, pf[i], opt.history)
     end
 end
 
 function grad!(opt::Optimization, sim::Simulation)
     chunks = get_chunks(sim.w.n)
     @sync for i in 1:length(workers())
-        @async remotecall_wait(workers()[i], grad!, chunks[i], opt, sim)
-    end    
+        @async remotecall_wait(workers()[i], grad!, chunks[i], opt, sim.xi, sim.yi, sim.zi, sim.w.particles)
+    end
 end

@@ -124,7 +124,7 @@ function test_acc(n, nout; smth=0.01, opening_alpha=0.7, tp=:spherical, use_brut
 end
 
 function test_backdynamics()
-    sim = Simulation(worldnormal(500, smth=0.01, opening_alpha=0.5),
+    sim = Simulation(worldnormal(500, smth=0.01, opening_alpha=0.7),
                 limit_by_steps=true, stepc=10)
 
     op_i = sim.w.particles[1]
@@ -153,3 +153,34 @@ function test_backdynamics()
 end
 
 test_backdynamics()
+
+function test_grad(;npart=500, nsub=50, stepc=10)
+    ixs = randperm(npart)[1:nsub]
+
+    sim = Simulation(worldnormal(npart, smth=0.01, opening_alpha=0.7),
+                limit_by_steps=true, stepc=stepc)
+
+    # getting fast gradients
+    opt = Optimization(sim)
+    @time exec!(sim, opt; silent=true, accumulate_history=true)
+    @time grad!(opt,sim)
+    fast_gx = opt.gx[ixs]
+
+    # getting slow gradients
+    slow_gx = zeros(nsub)
+    exec!(sim; silent=true)
+    D = 1.e-7
+    g0 = grade(sim, opt)
+    for i in 1:nsub
+        ix = ixs[i]
+        sim.xi[ix] += D
+        exec!(sim; silent=true)
+        sim.xi[ix] -= D
+        g1 = grade(sim, opt)
+        slow_gx[i] = (g1-g0)/D
+    end
+
+    fast_gx, slow_gx
+end
+
+test_grad()
