@@ -39,6 +39,7 @@ function kick!(sim::Simulation, ::Type{Val{true}}; dt=0.0)
         sim.test_particle_vy[i] += sim.test_particle_ay[i]*dt
         sim.test_particle_vz[i] += sim.test_particle_az[i]*dt
     end
+    nothing
 end
 
 function drift!(sim::Simulation, ::Type{Val{false}}; dt=0.0)
@@ -75,7 +76,7 @@ function calc_accel!(sim::Simulation, ::Type{Val{true}})
     nothing
 end
 
-function exec!(sim::Simulation; use_brute_force=false, silent=false, test_particles=Val{true})
+function exec!(sim::Simulation; use_brute_force=false, silent=false, test_particles=Val{false})
     reset!(sim)
     tic()
     calc_accel!(sim, test_particles)
