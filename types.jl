@@ -41,11 +41,20 @@ type Simulation
     vxi::SharedArray{Float64, 1}
     vyi::SharedArray{Float64, 1}
     vzi::SharedArray{Float64, 1}
+    test_particle_x::SharedArray{Float64, 1}
+    test_particle_y::SharedArray{Float64, 1}
+    test_particle_z::SharedArray{Float64, 1}
+    test_particle_vx::SharedArray{Float64, 1}
+    test_particle_vy::SharedArray{Float64, 1}
+    test_particle_vz::SharedArray{Float64, 1}
+    test_particle_ax::SharedArray{Float64, 1}
+    test_particle_ay::SharedArray{Float64, 1}
+    test_particle_az::SharedArray{Float64, 1}
     step::Int64
     limit_by_steps::Bool
 end
 
-function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
+function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false, n_test_particle=0)
     xi = SharedArray(Float64, w.n)
     yi = SharedArray(Float64, w.n)
     zi = SharedArray(Float64, w.n)
@@ -60,6 +69,16 @@ function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
         @inbounds vyi[i] = 0.0
         @inbounds vzi[i] = 0.0
     end
+    test_particle_x  = SharedArray(Float64, n_test_particle)
+    test_particle_y  = SharedArray(Float64, n_test_particle)
+    test_particle_z  = SharedArray(Float64, n_test_particle)
+    test_particle_vx = SharedArray(Float64, n_test_particle)
+    test_particle_vy = SharedArray(Float64, n_test_particle)
+    test_particle_vz = SharedArray(Float64, n_test_particle)
+    test_particle_ax = SharedArray(Float64, n_test_particle)
+    test_particle_ay = SharedArray(Float64, n_test_particle)
+    test_particle_az = SharedArray(Float64, n_test_particle)
+
     Simulation(
         createtree(w),
         w,
@@ -69,6 +88,9 @@ function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false)
         tf,  # tf
         stepc,   # stepf::Int64
         xi, yi, zi, vxi, vyi, vzi,
+        test_particle_x, test_particle_y, test_particle_z,
+        test_particle_vx, test_particle_vy, test_particle_vz,
+        test_particle_ax, test_particle_ay, test_particle_az,
         0, # step::Int64
         limit_by_steps # limit_by_steps::Bool
     )
@@ -85,20 +107,17 @@ function reset!(s::Simulation)
         s.vyi[i] = 0.0
         s.vzi[i] = 0.0
     end
+    for i in 1:length(s.test_particle_x)
+        s.test_particle_vx[i] = 0.0
+        s.test_particle_vy[i] = 0.0
+        s.test_particle_vz[i] = 0.0
+    end
     # set times and steps
     s.step = 0
     s.t = s.ti
 end
 
-type History
-    tree::Array{CompiledOctTree{Particle}, 1}
-    dt::Array{Float64, 1}
-    w::World
-    steps::Int64
-end
-
 type Optimization
-    history::History
     x0::SharedArray{Float64,1}
     y0::SharedArray{Float64,1}
     z0::SharedArray{Float64,1}
@@ -106,7 +125,6 @@ type Optimization
     gy::SharedArray{Float64,1}
     gz::SharedArray{Float64,1}
     function Optimization(sim::Simulation)
-        hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
         x0 = SharedArray(Float64, sim.w.n)
         y0 = SharedArray(Float64, sim.w.n)
         z0 = SharedArray(Float64, sim.w.n)
@@ -121,6 +139,6 @@ type Optimization
             @inbounds gy[i] = 0.0
             @inbounds gz[i] = 0.0
         end
-        new(hist, x0,y0,z0, gx,gy,gz)
+        new(x0,y0,z0, gx,gy,gz)
     end
 end

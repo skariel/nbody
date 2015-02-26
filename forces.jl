@@ -110,6 +110,36 @@ function calc_accel!(w::World, rng::UnitRange{Int64})
     nothing
 end
 
+function calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1}, w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
+    data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
+    @inbounds for i in w_rng
+        p = w.particles[i]
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.px = p._x
+        data.py = p._y
+        data.pz = p._z
+        map(w.tree, data)
+        w.ax[i] = data.ax
+        w.ay[i] = data.ay
+        w.az[i] = data.az
+    end
+    @inbounds for i in t_rng
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.px = tx[i]
+        data.py = ty[i]
+        data.pz = tz[i]
+        map(w.tree, data)
+        tax[i] = data.ax
+        tay[i] = data.ay
+        taz[i] = data.az
+    end
+    nothing
+end
+
 function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World)
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     data.ax = 0.0
@@ -126,5 +156,13 @@ function calc_accel!(w::World)
     chunks = get_chunks(w.n)
     @sync for i in 1:length(workers())
         @async remotecall_wait(workers()[i], calc_accel!, w, chunks[i])
+    end
+end
+
+function calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1})
+    w_chunks = get_chunks(w.n)
+    t_chunks = get_chunks(length(tx))
+    @sync for i in 1:length(workers())
+        @async remotecall_wait(workers()[i], calc_accel!, w, tx,ty,tz,tax,tay,taz, w_chunks[i], t_chunks[i])
     end
 end

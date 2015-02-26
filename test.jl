@@ -123,60 +123,128 @@ function test_acc(n, nout; smth=0.01, opening_alpha=0.7, tp=:spherical, use_brut
         )
 end
 
-function test_backdynamics()
+function test_test_particles()
     sim = Simulation(worldnormal(500, smth=0.01, opening_alpha=0.7),
-                limit_by_steps=true, stepc=10)
+                limit_by_steps=true, stepc=10, n_test_particle=500)
 
-    op_i = sim.w.particles[1]
+    for i in 1:500
+        sim.test_particle_x[i] = sim.w.particles[i]._x
+        sim.test_particle_y[i] = sim.w.particles[i]._y
+        sim.test_particle_z[i] = sim.w.particles[i]._z
+    end
+    ox = deepcopy(sim.test_particle_x)
+    oy = deepcopy(sim.test_particle_y)
+    oz = deepcopy(sim.test_particle_z)
 
-    hist = exec!(sim, silent=true, accumulate_history=true)
+    calc_accel!(sim, Val{true})
+    for i in 1:500
+        @test sim.test_particle_ax[i] == sim.w.ax[i]
+        @test sim.test_particle_ay[i] == sim.w.ay[i]
+        @test sim.test_particle_az[i] == sim.w.az[i]
+        @test sim.test_particle_ax[i] != 0.0
+        @test sim.test_particle_ay[i] != 0.0
+        @test sim.test_particle_az[i] != 0.0
+    end
 
-    op_f = sim.w.particles[1]
+    kick!(sim, Val{true}; dt=1.0)
+    for i in 1:500
+        @test sim.test_particle_vx[i] == sim.w.vx[i]
+        @test sim.test_particle_vy[i] == sim.w.vy[i]
+        @test sim.test_particle_vz[i] == sim.w.vz[i]
+        @test sim.test_particle_vx[i] != 0.0
+        @test sim.test_particle_vy[i] != 0.0
+        @test sim.test_particle_vz[i] != 0.0
+    end
 
-    odx = op_f._x - op_i._x
-    ody = op_f._y - op_i._y
-    odz = op_f._z - op_i._z
-    org_d = sqrt(odx*odx+ody*ody+odz*odz)
+    drift!(sim, Val{true}; dt=1.0)
+    for i in 1:500
+        @test sim.test_particle_x[i] == sim.w.particles[i]._x
+        @test sim.test_particle_y[i] == sim.w.particles[i]._y
+        @test sim.test_particle_z[i] == sim.w.particles[i]._z
+        @test sim.test_particle_x[i] != 0.0
+        @test sim.test_particle_y[i] != 0.0
+        @test sim.test_particle_z[i] != 0.0
+    end
 
-    np_f = exec(op_i, hist)
-    ndx = np_f._x - op_i._x
-    ndy = np_f._y - op_i._y
-    ndz = np_f._z - op_i._z
+    for i in 1:500
+        sim.test_particle_x[i] = sim.xi[i]
+        sim.test_particle_y[i] = sim.yi[i]
+        sim.test_particle_z[i] = sim.zi[i]
+    end
+    exec!(sim, silent=true, test_particles=Val{true})
 
-    dx = ndx - odx
-    dy = ndy - ody
-    dz = ndz - odz
-    d = sqrt(dx*dx+dy*dy+dz*dz)
+    for i in 1:500
+        @test sim.test_particle_x[i] == sim.w.particles[i]._x
+        @test sim.test_particle_y[i] == sim.w.particles[i]._y
+        @test sim.test_particle_z[i] == sim.w.particles[i]._z
+        @test ox[i] != sim.w.particles[i]._x
+        @test oy[i] != sim.w.particles[i]._y
+        @test oz[i] != sim.w.particles[i]._z
+    end
 
-    err= d/org_d*100.0
-    @test err==0.0
+
 end
 
-test_backdynamics()
+test_test_particles()
+
+function time_test_particles(n=10000)
+    sim = Simulation(worldnormal(n, smth=0.01, opening_alpha=0.7),
+                limit_by_steps=true, stepc=100, n_test_particle=3*n)
+    for i in 1:n
+        sim.test_particle_x[i] = sim.xi[i]
+        sim.test_particle_y[i] = sim.yi[i]
+        sim.test_particle_z[i] = sim.zi[i]
+
+        sim.test_particle_x[i+n] = sim.xi[i]
+        sim.test_particle_y[i+n] = sim.yi[i]
+        sim.test_particle_z[i+n] = sim.zi[i]
+
+        sim.test_particle_x[i+2n] = sim.xi[i]
+        sim.test_particle_y[i+2n] = sim.yi[i]
+        sim.test_particle_z[i+2n] = sim.zi[i]
+    end
+    t1 = @time exec!(sim; silent=true, test_particles=Val{false})
+    for i in 1:n
+        sim.test_particle_x[i] = sim.xi[i]
+        sim.test_particle_y[i] = sim.yi[i]
+        sim.test_particle_z[i] = sim.zi[i]
+
+        sim.test_particle_x[i+n] = sim.xi[i]
+        sim.test_particle_y[i+n] = sim.yi[i]
+        sim.test_particle_z[i+n] = sim.zi[i]
+
+        sim.test_particle_x[i+2n] = sim.xi[i]
+        sim.test_particle_y[i+2n] = sim.yi[i]
+        sim.test_particle_z[i+2n] = sim.zi[i]
+    end
+
+    t2 = @time exec!(sim, silent=true, test_particles=Val{true})
+    @show t2/t1/4
+end
 
 function test_grad(;npart=500, nsub=50, stepc=10)
     ixs = randperm(npart)[1:nsub]
 
-    sim = Simulation(worldnormal(npart, smth=0.01, opening_alpha=0.7),
-                limit_by_steps=true, stepc=stepc)
+    sim = Simulation(worldnormal(npart, smth=0.01, opening_alpha=0.4),
+                limit_by_steps=true, stepc=stepc, n_test_particle=3*npart)
 
     # getting fast gradients
     opt = Optimization(sim)
-    @time exec!(sim, opt; silent=true, accumulate_history=true)
     @time grad!(opt,sim)
+    @show maximum(opt.gx)
     fast_gx = opt.gx[ixs]
 
     # getting slow gradients
     slow_gx = zeros(nsub)
     exec!(sim; silent=true)
     D = 1.e-7
-    g0 = grade(sim, opt)
+    g0 = grade(opt, sim)
     for i in 1:nsub
         ix = ixs[i]
         sim.xi[ix] += D
         exec!(sim; silent=true)
         sim.xi[ix] -= D
-        g1 = grade(sim, opt)
+        g1 = grade(opt, sim)
         slow_gx[i] = (g1-g0)/D
     end
 

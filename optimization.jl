@@ -1,80 +1,53 @@
-function exec!(sim::Simulation, opt::Optimization; use_brute_force=false, silent=false, accumulate_history=false)
-    hist = History(CompiledOctTree{Particle}[], Float64[], sim.w, 0)
-    opt.history = exec!(sim, hist; use_brute_force=use_brute_force, silent=silent, accumulate_history=accumulate_history)
-end
-
-function exec(p::Particle, hist::History)
-    vx = 0.0
-    vy = 0.0
-    vz = 0.0
-    ax = 0.0
-    ay = 0.0
-    az = 0.0
-    tree = hist.tree[1]
-    ax, ay, az = calc_accel(p,tree,hist.w)
-    for i in 1:(length(hist.dt)-1)
-        # kick half dt
-        dt = hist.dt[i]
-        vx += ax*dt/2
-        vy += ay*dt/2
-        vz += az*dt/2
-        # drift dt
-        p = addxyz(p, vx*dt, vy*dt, vz*dt)
-        # kick another half dt
-        tree = hist.tree[i+1]
-        ax, ay, az = calc_accel(p,tree,hist.w)
-        vx += ax*dt/2
-        vy += ay*dt/2
-        vz += az*dt/2
+function grad!(opt::Optimization, sim::Simulation)
+    # setup test particle positions
+    D = 1.e-7
+    @inbounds for i in 1:sim.w.n
+        sim.test_particle_x[i] = sim.xi[i] + D
+        sim.test_particle_y[i] = sim.yi[i]
+        sim.test_particle_z[i] = sim.zi[i]
+        sim.test_particle_x[i+sim.w.n] = sim.xi[i]
+        sim.test_particle_y[i+sim.w.n] = sim.yi[i] + D
+        sim.test_particle_z[i+sim.w.n] = sim.zi[i]
+        sim.test_particle_x[i+2sim.w.n] = sim.xi[i]
+        sim.test_particle_y[i+2sim.w.n] = sim.yi[i]
+        sim.test_particle_z[i+2sim.w.n] = sim.zi[i] + D
     end
-    p
+
+    # run the simulation with these test particles
+    exec!(sim; silent=true, test_particles=Val{true})
+
+    # calculate gradient for each particle
+    @inbounds for i in 1:sim.w.n
+        dx_o = sim.w.particles[i]._x - opt.x0[i]
+        dy_o = sim.w.particles[i]._y - opt.y0[i]
+        dz_o = sim.w.particles[i]._z - opt.z0[i]
+        d2_o = dx_o*dx_o+dy_o*dy_o+dz_o*dz_o
+
+        dx_n = sim.test_particle_x[i] - opt.x0[i]
+        dy_n = sim.test_particle_y[i] - opt.y0[i]
+        dz_n = sim.test_particle_z[i] - opt.z0[i]
+        opt.gx[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
+
+        dx_n = sim.test_particle_x[i+sim.w.n] - opt.x0[i]
+        dy_n = sim.test_particle_y[i+sim.w.n] - opt.y0[i]
+        dz_n = sim.test_particle_z[i+sim.w.n] - opt.z0[i]
+        opt.gy[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
+
+        dx_n = sim.test_particle_x[i+2sim.w.n] - opt.x0[i]
+        dy_n = sim.test_particle_y[i+2sim.w.n] - opt.y0[i]
+        dz_n = sim.test_particle_z[i+2sim.w.n] - opt.z0[i]
+        opt.gz[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
+    end
+    nothing
 end
 
-@inline function grade(pf::Particle, p0::Particle)
-    const dx = pf._x - p0._x
-    const dy = pf._y - p0._y
-    const dz = pf._z - p0._z
-    dx*dx+dy*dy+dz*dz
-end
-
-function grade(sim::Simulation, opt::Optimization)
+function grade(opt::Optimization, sim::Simulation)
     g = 0.0
     @inbounds for i in 1:sim.w.n
-        g += grade(sim.w.particles[i], Particle(opt.x0[i], opt.y0[i], opt.z0[i]))
+        dx = sim.w.particles[i]._x - opt.x0[i]
+        dy = sim.w.particles[i]._y - opt.y0[i]
+        dz = sim.w.particles[i]._z - opt.z0[i]
+        g += dx*dx+dy*dy+dz*dz
     end
     g
-end
-
-@inline function grad(pi::Particle, p0::Particle, pf::Particle, hist::History)
-    const D = 1.e-7
-
-    const new_p_x = exec(addxyz(pi,  D,0.0,0.0), hist)
-    const new_p_y = exec(addxyz(pi,0.0,  D,0.0), hist)
-    const new_p_z = exec(addxyz(pi,0.0,0.0,  D), hist)
-
-    const org_grade = grade(pf, p0)
-    const x_grade = grade(new_p_x, p0)
-    const y_grade = grade(new_p_y, p0)
-    const z_grade = grade(new_p_z, p0)
-
-    (x_grade-org_grade)/D, (y_grade-org_grade)/D, (z_grade-org_grade)/D
-end
-
-function grad!(rng::UnitRange{Int64}, opt::Optimization,
-    xi::SharedArray{Float64,1},
-    yi::SharedArray{Float64,1},
-    zi::SharedArray{Float64,1},
-    pf::SharedArray{Particle,1})
-    for i in rng
-        @inbounds pi = Particle(xi[i], yi[i], zi[i])
-        @inbounds p0 = Particle(opt.x0[i], opt.y0[i], opt.z0[i])
-        @inbounds opt.gx[i], opt.gy[i], opt.gz[i] = grad(pi, p0, pf[i], opt.history)
-    end
-end
-
-function grad!(opt::Optimization, sim::Simulation)
-    chunks = get_chunks(sim.w.n)
-    @sync for i in 1:length(workers())
-        @async remotecall_wait(workers()[i], grad!, chunks[i], opt, sim.xi, sim.yi, sim.zi, sim.w.particles)
-    end
 end
