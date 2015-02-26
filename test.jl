@@ -225,7 +225,7 @@ end
 function test_grad(;npart=500, nsub=50, stepc=10)
     ixs = randperm(npart)[1:nsub]
 
-    sim = Simulation(worldnormal(npart, smth=0.01, opening_alpha=0.4),
+    sim = Simulation(worldnormal(npart, smth=0.01, opening_alpha=0.7),
                 limit_by_steps=true, stepc=stepc, n_test_particle=3*npart)
 
     # getting fast gradients
