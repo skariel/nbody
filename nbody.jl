@@ -11,6 +11,7 @@ include("simulation.jl")
 include("forces.jl")
 include("realizations.jl")
 include("plotting.jl")
+include("gradients.jl")
 include("optimization.jl")
 include("test.jl")
 

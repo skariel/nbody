@@ -65,6 +65,8 @@ end
     const dz2 = dz*dz
     const dr2 = dx2 + dy2 + dz2
 
+    dr2 < 1.e-6*1.e-6 && return true
+
     q.l > 0 && q.l*q.l/dr2 > data.w.opening_alpha2 && return false # we need to further open the node
 
     const smthdr2 = dr2+data.w.smth2

@@ -28,15 +28,15 @@ function World(particles::Array{Particle, 1}, smth, opening_alpha, dtfrac)
     )
 end
 
-particlesnormal(n::Int64) = hilbertsort!([Particle(randn(), randn(), randn(), 1./n) for i in 1:n])
+particlesnormal(n::Int64, scale=1.0) = hilbertsort!([Particle(randn()*scale, randn()*scale, randn()*scale, 1./n) for i in 1:n])
 
-function particlesspherical(n::Int64)
+function particlesspherical(n::Int64, scale=1.0, xy=false)
     particles = Particle[]
     while length(particles) < n
-        x = 2.0*rand()-1.0
-        y = 2.0*rand()-1.0
-        z = 2.0*rand()-1.0
-        if x*x+y*y+z*z < 1
+        x = 2.0*rand()*scale-scale
+        y = 2.0*rand()*scale-scale
+        z = xy ? 0.0 : 2.0*rand()*scale-scale
+        if x*x+y*y+z*z < scale*scale
             push!(particles, Particle(x,y,z,1.0/n))
         end
     end
@@ -46,8 +46,8 @@ end
 world(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
     World(particles, smth, opening_alpha, dtfrac)
 
-worldnormal(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
-    World(particlesnormal(n), smth, opening_alpha, dtfrac)
+worldnormal(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0) =
+    World(particlesnormal(n, scale), smth, opening_alpha, dtfrac)
 
-worldspherical(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
-    World(particlesspherical(n), smth, opening_alpha, dtfrac)
+worldspherical(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false) =
+    World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac)
