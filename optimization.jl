@@ -14,48 +14,66 @@ function grade(opt::Optimization, sim::Simulation, fact::Float64)
     res
 end
 
-function grade_rnd(opt::Optimization, sim::Simulation, fact::Float64)
-    rx = randn(sim.w.n)*fact
-    ry = randn(sim.w.n)*fact
-    rz = randn(sim.w.n)*fact
-    sim.xi += rx
-    sim.yi += ry
-    sim.zi += rz
-    exec!(sim, silent=true)
-    res = grade(opt, sim)
-    sim.xi -= rx*fact
-    sim.yi -= ry*fact
-    sim.zi -= rz*fact
-    res
-end
-
-function search!(opt::Optimization, sim::Simulation)
+function search!(opt::Optimization, sim::Simulation, shaking=false)
     curr_grade = grade(opt, sim)
     iter = 0
-    a = 1.0e30
-    b = 1.0e30
-    fa = 0.0
-    fb = 0.1
-    while a>curr_grade && iter < 100
-        fa = 0.0
-        fb = 0.1
-        while fb-fa > 1.e-4
-            iter += 1
+    fa = 0.3
+    fb = 0.7
+    a = 1.e30 # whatever
+    b = 1.e30 # whatever
+    recalc_a=true
+    recalc_b=true
+    while iter < 8
+        iter += 1
+
+        if recalc_a
             a = grade(opt, sim, fa)
+            recalc_a = false
+        end
+        if recalc_b
             b = grade(opt, sim, fb)
-            if b < a
-                fa = fb
-                fb *= 2.0
-            else
-                fb = 0.5*(fb+fa)
-            end
+            recalc_b = false
         end
+
         if a > curr_grade
-            a = grade_rnd(opt, sim, std(sim.xi)/500.0)
+            fb = fa
+            b = a
+            fa /= 1.5
+            recalc_a = true
+        elseif b < a
+            fa = fb
+            a = b
+            fb *= 1.3
+            recalc_b = true
+        else
+            fb = fa
+            b = a
+            fa /= 1.2
+            recalc_a = true
         end
+
+
     end
-    println("   - ls: iter=",iter," dgrade=",a/curr_grade, " fa=", fa)
-    fa
+    if recalc_a
+        a = grade(opt, sim, fa)
+    end
+    if recalc_b
+        b = grade(opt, sim, fb)
+    end
+    (g,f) = a<b ? (a,fa):(b,fb)
+    dgrade = g/curr_grade
+    if !shaking && dgrade > 0.9
+        # shake!
+        println("Shaking!")
+        @inbounds for i in 1:sim.w.n
+            opt.gx[i] = randn()
+            opt.gy[i] = randn()
+            opt.gz[i] = randn()
+        end
+        return search!(opt,sim,true)
+    end
+    println("   - ls: iter=",iter," dgrade=",dgrade, " f=", f)
+    f
 end
 
 function optimize(opt::Optimization, sim::Simulation, maxstep=10, ming=0.001)
