@@ -16,7 +16,16 @@ addxyz(p::Particle, dx::Float64, dy::Float64, dz::Float64) = Particle(p._x+dx,p.
 abstract SpaceType
 
 immutable Newtonian <: SpaceType end
-immutable Cosmological <: SpaceType end
+immutable Cosmological <: SpaceType
+    a3::Float64
+    H2::Float64
+    adda::Float64
+end
+
+function Cosmological(t=0.001)
+    const a = A(t)
+    Cosmological(a*a*a, 2*H(t), ADDA(t))
+end
 
 type World{T<:SpaceType}
     tree::CompiledOctTree{Particle}
@@ -31,6 +40,7 @@ type World{T<:SpaceType}
     opening_alpha2::Float64
     smth2::Float64
     dtfrac::Float64
+    space::T
 end
 
 type Simulation

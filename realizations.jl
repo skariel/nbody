@@ -24,7 +24,8 @@ function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, openin
         n,
         opening_alpha^2,
         smth*smth,
-        dtfrac
+        dtfrac,
+        T()
     )
 end
 
