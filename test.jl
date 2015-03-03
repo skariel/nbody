@@ -221,6 +221,34 @@ function time_test_particles(n=10000)
     @show t2/t1/4
 end
 
+function test_grad(opt::Optimization, sim::Simulation; npart=500, nsub=50, stepc=10, scale=1.0)
+    ixs = randperm(npart)[1:nsub]
+
+    sim = Simulation(worldspherical(npart, smth=0.1, opening_alpha=0.7, scale=scale),
+                limit_by_steps=true, stepc=stepc, n_test_particle=3*npart)
+
+    # getting fast gradients
+    opt = Optimization(sim)
+    grad!(opt,sim)
+    fast_gx = opt.gx[ixs]
+
+    # getting slow gradients
+    slow_gx = zeros(nsub)
+    exec!(sim; silent=true)
+    D = 1.e-8
+    g0 = grade(opt, sim)
+    for i in 1:nsub
+        ix = ixs[i]
+        sim.xi[ix] += D
+        exec!(sim; silent=true)
+        sim.xi[ix] -= D
+        g1 = grade(opt, sim)
+        slow_gx[i] = (g1-g0)/D
+    end
+
+    fast_gx, slow_gx
+end
+
 function test_grad(;npart=500, nsub=50, stepc=10, scale=1.0)
     ixs = randperm(npart)[1:nsub]
 
@@ -249,5 +277,5 @@ function test_grad(;npart=500, nsub=50, stepc=10, scale=1.0)
     fast_gx, slow_gx
 end
 
-#test_test_particles()
-#test_grad()
+test_test_particles()
+test_grad()

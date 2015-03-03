@@ -43,14 +43,14 @@ function buildtree!(w::World, tree::OctTree{Particle})
     nothing
 end
 
-type DataToCalculateAccelOnParticle
-    ax::Float64
-    ay::Float64
-    az::Float64
-    px::Float64
-    py::Float64
-    pz::Float64
-    w::World
+type DataToCalculateAccelOnParticle{T<:SpaceType}
+    ax::Float64 # to store calculated acceleration
+    ay::Float64 # ...
+    az::Float64 # ...
+    px::Float64 # particle position
+    py::Float64 # ...
+    pz::Float64 # ...
+    w::World{T}
 end
 
 @inline function stop_cond(q::CompiledOctTreeNode{Particle}, data::DataToCalculateAccelOnParticle)

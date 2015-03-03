@@ -1,4 +1,4 @@
-function World(particles::Array{Particle, 1}, smth, opening_alpha, dtfrac)
+function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, opening_alpha::Number, dtfrac::Number, space::Type{T})
     n = length(particles)
     spar = SharedArray(Particle, n)
     vx = SharedArray(Float64, n)
@@ -17,7 +17,7 @@ function World(particles::Array{Particle, 1}, smth, opening_alpha, dtfrac)
         @inbounds ay[i] = 0.0
         @inbounds az[i] = 0.0
     end
-    World(
+    World{space}(
         CompiledOctTree(int(1.8*n), Particle),
         spar,
         vx,vy,vz,ax,ay,az,
@@ -43,11 +43,11 @@ function particlesspherical(n::Int64, scale=1.0, xy=false)
     hilbertsort!(particles)
 end
 
-world(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035) =
-    World(particles, smth, opening_alpha, dtfrac)
+world{T<:SpaceType}(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035, space::Type{T}=Newtonian) =
+    World(particles, smth, opening_alpha, dtfrac, space)
 
-worldnormal(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0) =
-    World(particlesnormal(n, scale), smth, opening_alpha, dtfrac)
+worldnormal{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, space::Type{T}=Newtonian) =
+    World(particlesnormal(n, scale), smth, opening_alpha, dtfrac, space)
 
-worldspherical(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false) =
-    World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac)
+worldspherical{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false, space::Type{T}=Newtonian) =
+    World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac, space)

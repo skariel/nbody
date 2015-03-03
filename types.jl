@@ -12,7 +12,13 @@ getz(p::Particle) = p._z
 withxyz(p::Particle, x::Float64, y::Float64, z::Float64) = Particle(x,y,z, p._m)
 addxyz(p::Particle, dx::Float64, dy::Float64, dz::Float64) = Particle(p._x+dx,p._y+dy,p._z+dz, p._m)
 
-type World
+
+abstract SpaceType
+
+immutable Newtonian <: SpaceType end
+immutable Cosmological <: SpaceType end
+
+type World{T<:SpaceType}
     tree::CompiledOctTree{Particle}
     particles::SharedArray{Particle, 1}
     vx::SharedArray{Float64, 1}
