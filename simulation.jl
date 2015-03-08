@@ -62,13 +62,18 @@ function drift!(sim::Simulation, ::Type{Val{true}}; dt=0.0)
     nothing
 end
 
+@inline updatespace!(t::Float64, w::World{Newtonian}) = nothing
+@inline updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
+
 function calc_accel!(sim::Simulation, ::Type{Val{false}})
+    updatespace!(sim.t, sim.w)
     buildtree!(sim.w, sim.tree)
     calc_accel!(sim.w)
     nothing
 end
 
 function calc_accel!(sim::Simulation, ::Type{Val{true}})
+    updatespace!(sim.t, sim.w)
     buildtree!(sim.w, sim.tree)
     calc_accel!(sim.w,
         sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,

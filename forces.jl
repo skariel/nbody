@@ -110,15 +110,15 @@ end
     const smthdr2 = dr2+data.w.smth2
     const smthdr = sqrt(smthdr2)
     const denom = smthdr2*smthdr/q.point._m*data.w.space.a3
-    data.ax += dx/denom - data.w.adda*dx - data.w.space.H2*data.vx
-    data.ay += dy/denom - data.w.adda*dy - data.w.space.H2*data.vy
-    data.az += dz/denom - data.w.adda*dz - data.w.space.H2*data.vz
+    data.ax += dx/denom - data.w.space.adda*dx - data.w.space.H2*data.vx
+    data.ay += dy/denom - data.w.space.adda*dy - data.w.space.H2*data.vy
+    data.az += dz/denom - data.w.space.adda*dz - data.w.space.H2*data.vz
     return true
 end
 
-function calculate_accel_on_particle!(w::World, i::Int64)
+function calculate_accel_on_particle!(w::World{Newtonian}, i::Int64)
     data = DataToCalculateNewtonianAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
-    const p = w.particles[i]
+    @inbounds const p = w.particles[i]
     data.ax = 0.0
     data.ay = 0.0
     data.az = 0.0
@@ -126,13 +126,13 @@ function calculate_accel_on_particle!(w::World, i::Int64)
     data.py = p._y
     data.pz = p._z
     map(w.tree, data)
-    w.ax[i] = data.ax
-    w.ay[i] = data.ay
-    w.az[i] = data.az
+    @inbounds w.ax[i] = data.ax
+    @inbounds w.ay[i] = data.ay
+    @inbounds w.az[i] = data.az
     nothing
 end
 
-function calc_accel!(w::World, rng::UnitRange{Int64})
+function calc_accel!(w::World{Newtonian}, rng::UnitRange{Int64})
     data = DataToCalculateNewtonianAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     @inbounds for i in rng
         const p = w.particles[i]
@@ -150,7 +150,7 @@ function calc_accel!(w::World, rng::UnitRange{Int64})
     nothing
 end
 
-function calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1}, w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
+function calc_accel!(w::World{Newtonian}, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1}, w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
     data = DataToCalculateNewtonianAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     @inbounds for i in w_rng
         p = w.particles[i]
@@ -180,11 +180,104 @@ function calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Floa
     nothing
 end
 
-function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World)
+function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World{Newtonian})
     data = DataToCalculateNewtonianAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
     data.ax = 0.0
     data.ay = 0.0
     data.az = 0.0
+    data.px = p._x
+    data.py = p._y
+    data.pz = p._z
+    map(tree, data)
+    data.ax, data.ay, data.az
+end
+
+### Cosmological forces
+
+function calculate_accel_on_particle!(w::World{Cosmological}, i::Int64)
+    data = DataToCalculateCosmologicalAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,w)
+    const p = w.particles[i]
+    data.ax = 0.0
+    data.ay = 0.0
+    data.az = 0.0
+    @inbounds data.vx = w.vx[i]
+    @inbounds data.vy = w.vy[i]
+    @inbounds data.vz = w.vz[i]
+    data.px = p._x
+    data.py = p._y
+    data.pz = p._z
+    map(w.tree, data)
+    @inbounds w.ax[i] = data.ax
+    @inbounds w.ay[i] = data.ay
+    @inbounds w.az[i] = data.az
+    nothing
+end
+
+function calc_accel!(w::World{Cosmological}, rng::UnitRange{Int64})
+    data = DataToCalculateCosmologicalAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,w)
+    @inbounds for i in rng
+        const p = w.particles[i]
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.vx = w.vx[i]
+        data.vy = w.vy[i]
+        data.vz = w.vz[i]
+        data.px = p._x
+        data.py = p._y
+        data.pz = p._z
+        map(w.tree, data)
+        w.ax[i] = data.ax
+        w.ay[i] = data.ay
+        w.az[i] = data.az
+    end
+    nothing
+end
+
+function calc_accel!(w::World{Cosmological}, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1}, w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
+    data = DataToCalculateCosmologicalAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,w)
+    @inbounds for i in w_rng
+        p = w.particles[i]
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.vx = w.vx[i]
+        data.vy = w.vy[i]
+        data.vz = w.vz[i]
+        data.px = p._x
+        data.py = p._y
+        data.pz = p._z
+        map(w.tree, data)
+        w.ax[i] = data.ax
+        w.ay[i] = data.ay
+        w.az[i] = data.az
+    end
+    @inbounds for i in t_rng
+        data.ax = 0.0
+        data.ay = 0.0
+        data.az = 0.0
+        data.vx = w.vx[i]
+        data.vy = w.vy[i]
+        data.vz = w.vz[i]
+        data.px = tx[i]
+        data.py = ty[i]
+        data.pz = tz[i]
+        map(w.tree, data)
+        tax[i] = data.ax
+        tay[i] = data.ay
+        taz[i] = data.az
+    end
+    nothing
+end
+
+function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World{Cosmological})
+    data = DataToCalculateCosmologicalAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,w)
+    data.ax = 0.0
+    data.ay = 0.0
+    data.az = 0.0
+    @inbounds data.vx = w.vx[i]
+    @inbounds data.vy = w.vy[i]
+    @inbounds data.vz = w.vz[i]
     data.px = p._x
     data.py = p._y
     data.pz = p._z

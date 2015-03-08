@@ -277,5 +277,5 @@ function test_grad(;npart=500, nsub=50, stepc=10, scale=1.0)
     fast_gx, slow_gx
 end
 
-test_test_particles()
-test_grad()
+#test_test_particles()
+#test_grad()
