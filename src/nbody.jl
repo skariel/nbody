@@ -10,16 +10,22 @@ import OctTrees: modify, map, stop_cond, getx, gety, getz
 
 using GeometricalPredicates
 
+# TODO: change these to submodules...
+
 include("cosmology.jl")
-include("types.jl")
+include("space/common.jl")
+include("space/newtonian.jl")
+include("space/cosmological.jl")
+include("particle.jl")
+include("world/world.jl")
+include("world/realizations.jl")
 include("parallel.jl")
 include("simulation.jl")
 include("forces/common.jl")
 include("forces/newtonian.jl")
 include("forces/cosmological.jl")
-include("realizations.jl")
+include("optimization/optimization.jl")
+include("optimization/gradients.jl")
 include("plotting.jl")
-include("gradients.jl")
-include("optimization.jl")
 
 end # module

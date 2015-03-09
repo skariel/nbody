@@ -6,5 +6,8 @@ TODO:
 
 -- Relative opening criterion
 
+-- Dynamic update tree
+
+-- Distributed execution
 
 WIP!

@@ -1,3 +1,29 @@
+type Optimization
+    x0::SharedArray{Float64,1}
+    y0::SharedArray{Float64,1}
+    z0::SharedArray{Float64,1}
+    gx::SharedArray{Float64,1}
+    gy::SharedArray{Float64,1}
+    gz::SharedArray{Float64,1}
+    function Optimization(sim::Simulation)
+        x0 = SharedArray(Float64, sim.w.n)
+        y0 = SharedArray(Float64, sim.w.n)
+        z0 = SharedArray(Float64, sim.w.n)
+        gx = SharedArray(Float64, sim.w.n)
+        gy = SharedArray(Float64, sim.w.n)
+        gz = SharedArray(Float64, sim.w.n)
+        for i in 1:sim.w.n
+            @inbounds x0[i] = sim.xi[i]
+            @inbounds y0[i] = sim.yi[i]
+            @inbounds z0[i] = sim.zi[i]
+            @inbounds gx[i] = 0.0
+            @inbounds gy[i] = 0.0
+            @inbounds gz[i] = 0.0
+        end
+        new(x0,y0,z0, gx,gy,gz)
+    end
+end
+
 function evolve_ics!(opt::Optimization, sim::Simulation, fact::Float64)
     @inbounds for i in 1:sim.w.n
         sim.xi[i] -= opt.gx[i]*fact
