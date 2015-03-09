@@ -277,5 +277,14 @@ function test_grad(;npart=500, nsub=50, stepc=10, scale=1.0)
     fast_gx, slow_gx
 end
 
-#test_test_particles()
-#test_grad()
+a=0.3
+T=Ta(a)
+@test AD(T) == ADa(a)
+@test ADD(T) == ADDa(a)
+@test H(T) == Ha(a)
+@test Z(T) == Za(a);
+
+test_test_particles()
+test_grad()
+
+println("test passed!")

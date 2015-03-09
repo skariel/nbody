@@ -1,7 +1,7 @@
-type Simulation
+type Simulation{T<:SpaceType}
     tree::OctTree{Particle}
-    w::World
-    t::Float64
+    w::World{T}
+    t::Float64 # time parameter: real time for newtonian space, scale factor `a` for cosmological space
     dt::Float64
     ti::Float64
     tf::Float64
@@ -25,7 +25,7 @@ type Simulation
     limit_by_steps::Bool
 end
 
-function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false, n_test_particle=0)
+function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false, n_test_particle=0)
     xi = SharedArray(Float64, w.n)
     yi = SharedArray(Float64, w.n)
     zi = SharedArray(Float64, w.n)
@@ -50,7 +50,7 @@ function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false, n
     test_particle_ay = SharedArray(Float64, n_test_particle)
     test_particle_az = SharedArray(Float64, n_test_particle)
 
-    Simulation(
+    Simulation{T}(
         createtree(w),
         w,
         ti,  # t
@@ -67,10 +67,8 @@ function Simulation(w::World; ti=0.0, tf=1.0, stepc=100, limit_by_steps=false, n
     )
 end
 
-function reset!(s::Simulation)
-    # set initial positions and velocities
+function reset_vel!(s::Simulation{Newtonian})
     for i in 1:s.w.n
-        s.w.particles[i] = withxyz(s.w.particles[i], s.xi[i], s.yi[i], s.zi[i])
         s.w.vx[i] = 0.0
         s.w.vy[i] = 0.0
         s.w.vz[i] = 0.0
@@ -83,9 +81,43 @@ function reset!(s::Simulation)
         s.test_particle_vy[i] = 0.0
         s.test_particle_vz[i] = 0.0
     end
+end
+
+function reset_vel!(s::Simulation{Cosmological})
+    # use Zeldovich approx:
+
+    # 1) zero velocities
+    for i in 1:s.w.n
+        s.w.vx[i] = 0.0
+        s.w.vy[i] = 0.0
+        s.w.vz[i] = 0.0
+        s.vxi[i] = 0.0
+        s.vyi[i] = 0.0
+        s.vzi[i] = 0.0
+    end
+    for i in 1:length(s.test_particle_x)
+        s.test_particle_vx[i] = 0.0
+        s.test_particle_vy[i] = 0.0
+        s.test_particle_vz[i] = 0.0
+    end
+
+    # 2) calculate accel
+
+
+    # 3) calculate new velocities
+
+end
+
+function reset!(s::Simulation)
     # set times and steps
     s.step = 0
     s.t = s.ti
+    # set initial positions
+    for i in 1:s.w.n
+        s.w.particles[i] = withxyz(s.w.particles[i], s.xi[i], s.yi[i], s.zi[i])
+    end
+    # set initial velocities
+    reset_vel!(s)
 end
 
 function calc_dt(sim::Simulation, ::Type{Val{false}})

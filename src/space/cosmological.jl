@@ -1,10 +1,16 @@
 immutable Cosmological <: SpaceType
-    a3::Float64
-    H2::Float64
-    adda::Float64
+    a3::Float64      # === a^3
+    ddaa3::Float64   # === d/dt(da/dt) / a^3
+    FU::Float64      # === (2H da/dt + d/dt(da/dt)) / a^2
 end
 
-function Cosmological(t=0.001)
-    const a = A(t)
-    Cosmological(a*a*a, 2*H(t), ADDA(t))
+function Cosmological(a=0.01)
+    a2 = a*a
+    a3 = a2*a
+    add = ADDa(a)
+    Cosmological(
+        a3,
+        add/a3,
+        (2Ha(a)*ADa(a) + add)/a2
+    )
 end

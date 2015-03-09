@@ -1,3 +1,5 @@
+# some utilities for parallel processing
+
 function get_chunks(n::Int64)
     chunks_i = int(linspace(1,n,1+length(workers())))
     chunks_f = chunks_i[2:end]

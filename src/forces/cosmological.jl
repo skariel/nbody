@@ -30,9 +30,9 @@ end
     const smthdr2 = dr2+data.w.smth2
     const smthdr = sqrt(smthdr2)
     const denom = smthdr2*smthdr/q.point._m*data.w.space.a3
-    data.ax += dx/denom - data.w.space.adda*dx - data.w.space.H2*data.vx
-    data.ay += dy/denom - data.w.space.adda*dy - data.w.space.H2*data.vy
-    data.az += dz/denom - data.w.space.adda*dz - data.w.space.H2*data.vz
+    data.ax += dx/denom - data.w.space.ddaa3*dx - data.w.space.FU*data.vx
+    data.ay += dy/denom - data.w.space.ddaa3*dy - data.w.space.FU*data.vy
+    data.az += dz/denom - data.w.space.ddaa3*dz - data.w.space.FU*data.vz
     return true
 end
 

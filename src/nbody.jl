@@ -28,4 +28,6 @@ include("optimization/optimization.jl")
 include("optimization/gradients.jl")
 include("plotting.jl")
 
+include("../test/test.jl")
+
 end # module
