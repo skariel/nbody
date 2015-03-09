@@ -102,10 +102,19 @@ function reset_vel!(s::Simulation{Cosmological})
     end
 
     # 2) calculate accel
+    calc_accel!(s)
 
-
-    # 3) calculate new velocities
-
+    # 3) fix Zeldovich velocities
+    for i in 1:s.w.n
+        s.w.vx[i] = s.w.ax[i] / s.w.space.FU
+        s.w.vy[i] = s.w.ay[i] / s.w.space.FU
+        s.w.vz[i] = s.w.az[i] / s.w.space.FU
+    end
+    for i in 1:length(s.test_particle_x)
+        s.test_particle_vx[i] = s.test_particle_ax[i] / s.w.space.FU
+        s.test_particle_vy[i] = s.test_particle_ay[i] / s.w.space.FU
+        s.test_particle_vz[i] = s.test_particle_az[i] / s.w.space.FU
+    end
 end
 
 function reset!(s::Simulation)
@@ -120,8 +129,9 @@ function reset!(s::Simulation)
     reset_vel!(s)
 end
 
-function calc_dt(sim::Simulation, ::Type{Val{false}})
+function calc_dt(sim::Simulation)
     mindt2 = 1.e30 # infinity, ha!
+    # real particles
     @inline for i in 1:sim.w.n
         const a2 = sim.w.ax[i]*sim.w.ax[i] + sim.w.ay[i]*sim.w.ay[i] + sim.w.az[i]*sim.w.az[i]
         const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
@@ -129,12 +139,7 @@ function calc_dt(sim::Simulation, ::Type{Val{false}})
             mindt2 = dyn_dt2
         end
     end
-    sqrt(mindt2)
-end
-
-function calc_dt(sim::Simulation, ::Type{Val{true}})
-    mindt = calc_dt(sim, Val{false})
-    mindt2 = mindt*mindt
+    # test particles
     @inline for i in 1:length(sim.test_particle_x)
         const a2 = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
         const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
@@ -142,20 +147,22 @@ function calc_dt(sim::Simulation, ::Type{Val{true}})
             mindt2 = dyn_dt2
         end
     end
-    sqrt(mindt2)
+    mindt = sqrt(mindt2)
+    # TODO: parametrize this aspect ie maximal timestep in both cosmological and newtonian simulations
+    if is(typeof(sim.w), World{Cosmological}) && mindt > 0.05
+        mindt = 0.05
+    end
+    mindt
 end
 
-function kick!(sim::Simulation, ::Type{Val{false}}; dt=0.0)
+function kick!(sim::Simulation; dt=0.0)
+    # real particles
     @inline for i in 1:sim.w.n
         sim.w.vx[i] += sim.w.ax[i]*dt
         sim.w.vy[i] += sim.w.ay[i]*dt
         sim.w.vz[i] += sim.w.az[i]*dt
     end
-    nothing
-end
-
-function kick!(sim::Simulation, ::Type{Val{true}}; dt=0.0)
-    kick!(sim, Val{false}; dt=dt)
+    # test particles
     @inline for i in 1:length(sim.test_particle_x)
         sim.test_particle_vx[i] += sim.test_particle_ax[i]*dt
         sim.test_particle_vy[i] += sim.test_particle_ay[i]*dt
@@ -164,18 +171,15 @@ function kick!(sim::Simulation, ::Type{Val{true}}; dt=0.0)
     nothing
 end
 
-function drift!(sim::Simulation, ::Type{Val{false}}; dt=0.0)
+function drift!(sim::Simulation; dt=0.0)
+    # real particles
     @inline for i in 1:sim.w.n
         const dx = sim.w.vx[i]*dt
         const dy = sim.w.vy[i]*dt
         const dz = sim.w.vz[i]*dt
         sim.w.particles[i] = addxyz(sim.w.particles[i], dx, dy, dz)
     end
-    nothing
-end
-
-function drift!(sim::Simulation, ::Type{Val{true}}; dt=0.0)
-    drift!(sim, Val{false}; dt=dt)
+    # test particles
     @inline for i in 1:length(sim.test_particle_x)
         sim.test_particle_x[i] += sim.test_particle_vx[i]*dt
         sim.test_particle_y[i] += sim.test_particle_vy[i]*dt
@@ -187,14 +191,7 @@ end
 @inline updatespace!(t::Float64, w::World{Newtonian}) = nothing
 @inline updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
 
-function calc_accel!(sim::Simulation, ::Type{Val{false}})
-    updatespace!(sim.t, sim.w)
-    buildtree!(sim.w, sim.tree)
-    calc_accel!(sim.w)
-    nothing
-end
-
-function calc_accel!(sim::Simulation, ::Type{Val{true}})
+function calc_accel!(sim::Simulation{Newtonian})
     updatespace!(sim.t, sim.w)
     buildtree!(sim.w, sim.tree)
     calc_accel!(sim.w,
@@ -203,14 +200,24 @@ function calc_accel!(sim::Simulation, ::Type{Val{true}})
     nothing
 end
 
-function exec!(sim::Simulation; use_brute_force=false, silent=false, test_particles=Val{false})
+function calc_accel!(sim::Simulation{Cosmological})
+    updatespace!(sim.t, sim.w)
+    buildtree!(sim.w, sim.tree)
+    calc_accel!(sim.w,
+        sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,
+        sim.test_particle_ax, sim.test_particle_ay, sim.test_particle_az,
+        sim.test_particle_vx, sim.test_particle_vy, sim.test_particle_vz)
+    nothing
+end
+
+function exec!(sim::Simulation; use_brute_force=false, silent=false)
     reset!(sim)
     tic()
-    calc_accel!(sim, test_particles)
+    calc_accel!(sim)
     break_time = false
     while true
         sim.step += 1
-        sim.dt = calc_dt(sim, test_particles)
+        sim.dt = calc_dt(sim)
         if !sim.limit_by_steps
             if sim.t+sim.dt > sim.tf
                 sim.dt = sim.tf - sim.t
@@ -220,14 +227,14 @@ function exec!(sim::Simulation; use_brute_force=false, silent=false, test_partic
         !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
         tic()
 
-        kick!(sim, test_particles, dt=sim.dt/2)
-        drift!(sim, test_particles, dt=sim.dt)
+        kick!(sim, dt=sim.dt/2)
+        drift!(sim, dt=sim.dt)
         if !use_brute_force
-            calc_accel!(sim, test_particles)
+            calc_accel!(sim)
         else
-            calc_accel_brute_force!(sim, test_particles)
+            calc_accel_brute_force!(sim)
         end
-        kick!(sim, test_particles, dt=sim.dt/2)
+        kick!(sim, dt=sim.dt/2)
 
         sim.t += sim.dt
         elapsed = toq()

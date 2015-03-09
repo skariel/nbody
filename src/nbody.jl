@@ -1,6 +1,5 @@
 # TODO: make this into a real package
 # TODO: some docs
-# TODO: separate testing into its own directory
 # TODO: Integrate with TravisCI & Coveralls
 
 module nbody
@@ -28,6 +27,6 @@ include("optimization/optimization.jl")
 include("optimization/gradients.jl")
 include("plotting.jl")
 
-include("../test/test.jl")
+#include("../test/test.jl")
 
 end # module

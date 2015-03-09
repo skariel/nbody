@@ -136,7 +136,7 @@ function test_test_particles()
     oy = deepcopy(sim.test_particle_y)
     oz = deepcopy(sim.test_particle_z)
 
-    calc_accel!(sim, Val{true})
+    calc_accel!(sim)
     for i in 1:500
         @test sim.test_particle_ax[i] == sim.w.ax[i]
         @test sim.test_particle_ay[i] == sim.w.ay[i]
@@ -146,7 +146,7 @@ function test_test_particles()
         @test sim.test_particle_az[i] != 0.0
     end
 
-    kick!(sim, Val{true}; dt=1.0)
+    kick!(sim; dt=1.0)
     for i in 1:500
         @test sim.test_particle_vx[i] == sim.w.vx[i]
         @test sim.test_particle_vy[i] == sim.w.vy[i]
@@ -156,7 +156,7 @@ function test_test_particles()
         @test sim.test_particle_vz[i] != 0.0
     end
 
-    drift!(sim, Val{true}; dt=1.0)
+    drift!(sim; dt=1.0)
     for i in 1:500
         @test sim.test_particle_x[i] == sim.w.particles[i]._x
         @test sim.test_particle_y[i] == sim.w.particles[i]._y
@@ -171,7 +171,7 @@ function test_test_particles()
         sim.test_particle_y[i] = sim.yi[i]
         sim.test_particle_z[i] = sim.zi[i]
     end
-    exec!(sim, silent=true, test_particles=Val{true})
+    exec!(sim, silent=true)
 
     for i in 1:500
         @test sim.test_particle_x[i] == sim.w.particles[i]._x
@@ -202,7 +202,7 @@ function time_test_particles(n=10000)
         sim.test_particle_y[i+2n] = sim.yi[i]
         sim.test_particle_z[i+2n] = sim.zi[i]
     end
-    t1 = @time exec!(sim; silent=true, test_particles=Val{false})
+    t1 = @time exec!(sim; silent=true)
     for i in 1:n
         sim.test_particle_x[i] = sim.xi[i]
         sim.test_particle_y[i] = sim.yi[i]
@@ -217,7 +217,7 @@ function time_test_particles(n=10000)
         sim.test_particle_z[i+2n] = sim.zi[i]
     end
 
-    t2 = @time exec!(sim, silent=true, test_particles=Val{true})
+    t2 = @time exec!(sim, silent=true)
     @show t2/t1/4
 end
 

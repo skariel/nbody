@@ -14,7 +14,7 @@ function grad!(opt::Optimization, sim::Simulation)
     end
 
     # run the simulation with these test particles
-    exec!(sim; silent=true, test_particles=Val{true})
+    exec!(sim; silent=true)
 
     # calculate gradient for each particle
     @inbounds for i in 1:sim.w.n
