@@ -67,56 +67,6 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
     )
 end
 
-function reset_vel!(s::Simulation{Newtonian})
-    for i in 1:s.w.n
-        s.w.vx[i] = 0.0
-        s.w.vy[i] = 0.0
-        s.w.vz[i] = 0.0
-        s.vxi[i] = 0.0
-        s.vyi[i] = 0.0
-        s.vzi[i] = 0.0
-    end
-    for i in 1:length(s.test_particle_x)
-        s.test_particle_vx[i] = 0.0
-        s.test_particle_vy[i] = 0.0
-        s.test_particle_vz[i] = 0.0
-    end
-end
-
-function reset_vel!(s::Simulation{Cosmological})
-    # use Zeldovich approx:
-
-    # 1) zero velocities
-    for i in 1:s.w.n
-        s.w.vx[i] = 0.0
-        s.w.vy[i] = 0.0
-        s.w.vz[i] = 0.0
-        s.vxi[i] = 0.0
-        s.vyi[i] = 0.0
-        s.vzi[i] = 0.0
-    end
-    for i in 1:length(s.test_particle_x)
-        s.test_particle_vx[i] = 0.0
-        s.test_particle_vy[i] = 0.0
-        s.test_particle_vz[i] = 0.0
-    end
-
-    # 2) calculate accel
-    calc_accel!(s)
-
-    # 3) fix Zeldovich velocities
-    for i in 1:s.w.n
-        s.w.vx[i] = s.w.ax[i] / s.w.space.FU
-        s.w.vy[i] = s.w.ay[i] / s.w.space.FU
-        s.w.vz[i] = s.w.az[i] / s.w.space.FU
-    end
-    for i in 1:length(s.test_particle_x)
-        s.test_particle_vx[i] = s.test_particle_ax[i] / s.w.space.FU
-        s.test_particle_vy[i] = s.test_particle_ay[i] / s.w.space.FU
-        s.test_particle_vz[i] = s.test_particle_az[i] / s.w.space.FU
-    end
-end
-
 function reset!(s::Simulation)
     # set times and steps
     s.step = 0
@@ -168,45 +118,6 @@ function kick!(sim::Simulation; dt=0.0)
         sim.test_particle_vy[i] += sim.test_particle_ay[i]*dt
         sim.test_particle_vz[i] += sim.test_particle_az[i]*dt
     end
-    nothing
-end
-
-function drift!(sim::Simulation; dt=0.0)
-    # real particles
-    @inline for i in 1:sim.w.n
-        const dx = sim.w.vx[i]*dt
-        const dy = sim.w.vy[i]*dt
-        const dz = sim.w.vz[i]*dt
-        sim.w.particles[i] = addxyz(sim.w.particles[i], dx, dy, dz)
-    end
-    # test particles
-    @inline for i in 1:length(sim.test_particle_x)
-        sim.test_particle_x[i] += sim.test_particle_vx[i]*dt
-        sim.test_particle_y[i] += sim.test_particle_vy[i]*dt
-        sim.test_particle_z[i] += sim.test_particle_vz[i]*dt
-    end
-    nothing
-end
-
-@inline updatespace!(t::Float64, w::World{Newtonian}) = nothing
-@inline updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
-
-function calc_accel!(sim::Simulation{Newtonian})
-    updatespace!(sim.t, sim.w)
-    buildtree!(sim.w, sim.tree)
-    calc_accel!(sim.w,
-        sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,
-        sim.test_particle_ax, sim.test_particle_ay, sim.test_particle_az)
-    nothing
-end
-
-function calc_accel!(sim::Simulation{Cosmological})
-    updatespace!(sim.t, sim.w)
-    buildtree!(sim.w, sim.tree)
-    calc_accel!(sim.w,
-        sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,
-        sim.test_particle_ax, sim.test_particle_ay, sim.test_particle_az,
-        sim.test_particle_vx, sim.test_particle_vy, sim.test_particle_vz)
     nothing
 end
 

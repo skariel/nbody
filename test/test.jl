@@ -279,7 +279,7 @@ end
 
 a=0.3
 T=Ta(a)
-@test AD(T) == ADa(a)
+@test S(T) == Sa(a)
 @test ADD(T) == ADDa(a)
 @test H(T) == Ha(a)
 @test Z(T) == Za(a);

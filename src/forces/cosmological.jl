@@ -1,7 +1,7 @@
 # Post processing the newtonian stuff
 
 @inline post(w::World{Cosmological}, x::Float64, v::Float64, a::Float64) =
-    a/w.space.a3 - w.space.ddaa3*x - w.space.FU*v
+    w.space.F1*a - w.space.F2*x - w.space.F3*v
 
 @inline function calculate_accel_on_particle!(w::World{Cosmological}, i::Int64)
     __calculate_accel_on_particle!(w,i)
