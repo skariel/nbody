@@ -15,3 +15,8 @@
 @inline Ha(a) = 2/3/a^(3/2)
 @inline Za(a) = 1./a-1.
 @inline Sa(a) = 2/3
+
+###################
+
+FD(a1,a2) = 3*(1./sqrt(a1)-1./sqrt(a2))
+FK(a1,a2) = 3*(sqrt(a2) - sqrt(a1))

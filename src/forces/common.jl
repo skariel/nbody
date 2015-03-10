@@ -161,3 +161,11 @@ function calc_accel!(w::World)
         @async remotecall_wait(workers()[i], calc_accel!, w, chunks[i])
     end
 end
+
+function calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1})
+    w_chunks = get_chunks(w.n)
+    t_chunks = get_chunks(length(tx))
+    @sync for i in 1:length(workers())
+        @async remotecall_wait(workers()[i], calc_accel!, w, tx,ty,tz,tax,tay,taz, w_chunks[i], t_chunks[i])
+    end
+end

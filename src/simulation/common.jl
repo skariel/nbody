@@ -1,3 +1,5 @@
+# TODO: initial positions for test particle
+# TODO: enable execution w/o test particles for performance reasons
 type Simulation{T<:SpaceType}
     tree::OctTree{Particle}
     w::World{T}
@@ -76,10 +78,22 @@ function reset!(s::Simulation)
         s.w.particles[i] = withxyz(s.w.particles[i], s.xi[i], s.yi[i], s.zi[i])
     end
     # set initial velocities
-    reset_vel!(s)
+    for i in 1:s.w.n
+        s.w.vx[i] = 0.0
+        s.w.vy[i] = 0.0
+        s.w.vz[i] = 0.0
+        s.vxi[i] = 0.0
+        s.vyi[i] = 0.0
+        s.vzi[i] = 0.0
+    end
+    for i in 1:length(s.test_particle_x)
+        s.test_particle_vx[i] = 0.0
+        s.test_particle_vy[i] = 0.0
+        s.test_particle_vz[i] = 0.0
+    end
 end
 
-function calc_dt(sim::Simulation)
+function calc_dt(sim::Simulation, simulate_test_particles::Bool)
     mindt2 = 1.e30 # infinity, ha!
     # real particles
     @inline for i in 1:sim.w.n
@@ -89,12 +103,14 @@ function calc_dt(sim::Simulation)
             mindt2 = dyn_dt2
         end
     end
-    # test particles
-    @inline for i in 1:length(sim.test_particle_x)
-        const a2 = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
-        const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
-        if dyn_dt2 < mindt2
-            mindt2 = dyn_dt2
+    if simulate_test_particles
+        # test particles
+        @inline for i in 1:length(sim.test_particle_x)
+            const a2 = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
+            const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
+            if dyn_dt2 < mindt2
+                mindt2 = dyn_dt2
+            end
         end
     end
     mindt = sqrt(mindt2)
@@ -105,30 +121,14 @@ function calc_dt(sim::Simulation)
     mindt
 end
 
-function kick!(sim::Simulation; dt=0.0)
-    # real particles
-    @inline for i in 1:sim.w.n
-        sim.w.vx[i] += sim.w.ax[i]*dt
-        sim.w.vy[i] += sim.w.ay[i]*dt
-        sim.w.vz[i] += sim.w.az[i]*dt
-    end
-    # test particles
-    @inline for i in 1:length(sim.test_particle_x)
-        sim.test_particle_vx[i] += sim.test_particle_ax[i]*dt
-        sim.test_particle_vy[i] += sim.test_particle_ay[i]*dt
-        sim.test_particle_vz[i] += sim.test_particle_az[i]*dt
-    end
-    nothing
-end
-
-function exec!(sim::Simulation; use_brute_force=false, silent=false)
+function exec!(sim::Simulation, simulate_test_particles::Bool; use_brute_force=false, silent=false)
     reset!(sim)
     tic()
-    calc_accel!(sim)
+    calc_accel!(sim, simulate_test_particles)
     break_time = false
     while true
         sim.step += 1
-        sim.dt = calc_dt(sim)
+        sim.dt = calc_dt(sim, simulate_test_particles)
         if !sim.limit_by_steps
             if sim.t+sim.dt > sim.tf
                 sim.dt = sim.tf - sim.t
@@ -138,16 +138,17 @@ function exec!(sim::Simulation; use_brute_force=false, silent=false)
         !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
         tic()
 
-        kick!(sim, dt=sim.dt/2)
-        drift!(sim, dt=sim.dt)
+        kick!(sim, simulate_test_particles, dt=sim.dt/2)
+        drift!(sim, simulate_test_particles, dt=sim.dt)
         if !use_brute_force
-            calc_accel!(sim)
+            calc_accel!(sim, simulate_test_particles)
         else
             calc_accel_brute_force!(sim)
         end
-        kick!(sim, dt=sim.dt/2)
+        sim.t += sim.dt/2
+        kick!(sim, simulate_test_particles, dt=sim.dt/2)
+        sim.t += sim.dt/2
 
-        sim.t += sim.dt
         elapsed = toq()
         !silent && print(" /",elapsed,"s\n")
 

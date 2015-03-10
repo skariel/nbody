@@ -34,7 +34,7 @@ end
 
 function grade(opt::Optimization, sim::Simulation, fact::Float64)
     evolve_ics!(opt, sim, fact)
-    exec!(sim, silent=true)
+    exec!(sim, false, silent=true)
     res = grade(opt, sim)
     evolve_ics!(opt, sim, -fact)
     res
@@ -106,7 +106,7 @@ function optimize(opt::Optimization, sim::Simulation, maxstep=10, ming=0.001)
     step = 1
     g = 1.e30 # infinity, ha!
     while step <= maxstep && g > ming
-        exec!(sim, silent=true)
+        exec!(sim, false, silent=true)
         g = grade(opt,sim)
         println("step=",step," grade=",g)
 

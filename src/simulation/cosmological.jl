@@ -1,63 +1,58 @@
-function reset_vel!(s::Simulation{Cosmological})
-    # use Zeldovich approx:
-
-    # 1) zero velocities
-    for i in 1:s.w.n
-        s.w.vx[i] = 0.0
-        s.w.vy[i] = 0.0
-        s.w.vz[i] = 0.0
-        s.vxi[i] = 0.0
-        s.vyi[i] = 0.0
-        s.vzi[i] = 0.0
+function kick!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt=0.0)
+    # real particles
+    a1 = sim.t
+    a2 = sim.t+dt
+    fk = FK(a1,a2)
+    @inline for i in 1:sim.w.n
+        sim.w.vx[i] += sim.w.ax[i]*fk
+        sim.w.vy[i] += sim.w.ay[i]*fk
+        sim.w.vz[i] += sim.w.az[i]*fk
     end
-    for i in 1:length(s.test_particle_x)
-        s.test_particle_vx[i] = 0.0
-        s.test_particle_vy[i] = 0.0
-        s.test_particle_vz[i] = 0.0
+    if simulate_test_particles
+        # test particles
+        @inline for i in 1:length(sim.test_particle_x)
+            sim.test_particle_vx[i] += sim.test_particle_ax[i]*fk
+            sim.test_particle_vy[i] += sim.test_particle_ay[i]*fk
+            sim.test_particle_vz[i] += sim.test_particle_az[i]*fk
+        end
     end
-
-    # 2) calculate accel
-    calc_accel!(s)
-
-    # 3) fix Zeldovich velocities
-    for i in 1:s.w.n
-        s.w.vx[i] = s.w.ax[i] / s.w.space.F3
-        s.w.vy[i] = s.w.ay[i] / s.w.space.F3
-        s.w.vz[i] = s.w.az[i] / s.w.space.F3
-    end
-    for i in 1:length(s.test_particle_x)
-        s.test_particle_vx[i] = s.test_particle_ax[i] / s.w.space.F3
-        s.test_particle_vy[i] = s.test_particle_ay[i] / s.w.space.F3
-        s.test_particle_vz[i] = s.test_particle_az[i] / s.w.space.F3
-    end
+    nothing
 end
 
-function drift!(sim::Simulation{Cosmological}; dt=0.0)
+function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt=0.0)
     updatespace!(sim.t, sim.w)
     # real particles
+    a1 = sim.t
+    a2 = sim.t+dt
+    fd = FD(a1,a2)
     @inline for i in 1:sim.w.n
-        const dx = sim.w.vx[i]*dt*sim.w.space.sa
-        const dy = sim.w.vy[i]*dt*sim.w.space.sa
-        const dz = sim.w.vz[i]*dt*sim.w.space.sa
+        const dx = sim.w.vx[i]*fd
+        const dy = sim.w.vy[i]*fd
+        const dz = sim.w.vz[i]*fd
         sim.w.particles[i] = addxyz(sim.w.particles[i], dx, dy, dz)
     end
-    # test particles
-    @inline for i in 1:length(sim.test_particle_x)
-        sim.test_particle_x[i] += sim.test_particle_vx[i]*dt*sim.w.space.sa
-        sim.test_particle_y[i] += sim.test_particle_vy[i]*dt*sim.w.space.sa
-        sim.test_particle_z[i] += sim.test_particle_vz[i]*dt*sim.w.space.sa
+    if simulate_test_particles
+        # test particles
+        @inline for i in 1:length(sim.test_particle_x)
+            sim.test_particle_x[i] += sim.test_particle_vx[i]*fd
+            sim.test_particle_y[i] += sim.test_particle_vy[i]*fd
+            sim.test_particle_z[i] += sim.test_particle_vz[i]*fd
+        end
     end
     nothing
 end
 
 @inline updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
 
-function calc_accel!(sim::Simulation{Cosmological})
+function calc_accel!(sim::Simulation{Cosmological}, simulate_test_particles::Bool)
     updatespace!(sim.t, sim.w)
     buildtree!(sim.w, sim.tree)
-    calc_accel!(sim.w,
-        sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,
-        sim.test_particle_ax, sim.test_particle_ay, sim.test_particle_az,
-        sim.test_particle_vx, sim.test_particle_vy, sim.test_particle_vz)
+    if simulate_test_particles
+        calc_accel!(sim.w,
+            sim.test_particle_x, sim.test_particle_y, sim.test_particle_z,
+            sim.test_particle_ax, sim.test_particle_ay, sim.test_particle_az)
+    else
+        calc_accel!(sim.w)
+    end
     nothing
 end

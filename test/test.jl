@@ -171,7 +171,7 @@ function test_test_particles()
         sim.test_particle_y[i] = sim.yi[i]
         sim.test_particle_z[i] = sim.zi[i]
     end
-    exec!(sim, silent=true)
+    exec!(sim, true, silent=true)
 
     for i in 1:500
         @test sim.test_particle_x[i] == sim.w.particles[i]._x
@@ -202,7 +202,7 @@ function time_test_particles(n=10000)
         sim.test_particle_y[i+2n] = sim.yi[i]
         sim.test_particle_z[i+2n] = sim.zi[i]
     end
-    t1 = @time exec!(sim; silent=true)
+    t1 = @time exec!(sim, true; silent=true)
     for i in 1:n
         sim.test_particle_x[i] = sim.xi[i]
         sim.test_particle_y[i] = sim.yi[i]
@@ -217,7 +217,7 @@ function time_test_particles(n=10000)
         sim.test_particle_z[i+2n] = sim.zi[i]
     end
 
-    t2 = @time exec!(sim, silent=true)
+    t2 = @time exec!(sim, true, silent=true)
     @show t2/t1/4
 end
 
@@ -234,13 +234,13 @@ function test_grad(opt::Optimization, sim::Simulation; npart=500, nsub=50, stepc
 
     # getting slow gradients
     slow_gx = zeros(nsub)
-    exec!(sim; silent=true)
+    exec!(sim, true; silent=true)
     D = 1.e-8
     g0 = grade(opt, sim)
     for i in 1:nsub
         ix = ixs[i]
         sim.xi[ix] += D
-        exec!(sim; silent=true)
+        exec!(sim, true; silent=true)
         sim.xi[ix] -= D
         g1 = grade(opt, sim)
         slow_gx[i] = (g1-g0)/D
@@ -262,13 +262,13 @@ function test_grad(;npart=500, nsub=50, stepc=10, scale=1.0)
 
     # getting slow gradients
     slow_gx = zeros(nsub)
-    exec!(sim; silent=true)
+    exec!(sim, true; silent=true)
     D = 1.e-8
     g0 = grade(opt, sim)
     for i in 1:nsub
         ix = ixs[i]
         sim.xi[ix] += D
-        exec!(sim; silent=true)
+        exec!(sim, true; silent=true)
         sim.xi[ix] -= D
         g1 = grade(opt, sim)
         slow_gx[i] = (g1-g0)/D
