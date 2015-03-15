@@ -4,8 +4,8 @@ type Simulation{T<:SpaceType}
     tree::OctTree{Particle}
     w::World{T}
     t::Float64 # time parameter: real time for newtonian space, scale factor `a` for cosmological space
-    dt::Float64
     ti::Float64
+    dt::Float64
     tf::Float64
     stepf::Int64
     xi::SharedArray{Float64, 1}
@@ -14,7 +14,6 @@ type Simulation{T<:SpaceType}
     vxi::SharedArray{Float64, 1}
     vyi::SharedArray{Float64, 1}
     vzi::SharedArray{Float64, 1}
-    dt::SharedArray{Float64, 1}
     test_particle_x::SharedArray{Float64, 1}
     test_particle_y::SharedArray{Float64, 1}
     test_particle_z::SharedArray{Float64, 1}
@@ -35,15 +34,13 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
     vxi = SharedArray(Float64, w.n)
     vyi = SharedArray(Float64, w.n)
     vzi = SharedArray(Float64, w.n)
-    dt = SharedArray(Float64, w.n)
     for i in 1:w.n
-        @inbounds xi[i] = w.particles[i]._x
-        @inbounds yi[i] = w.particles[i]._y
-        @inbounds zi[i] = w.particles[i]._z
-        @inbounds vxi[i] = 0.0
-        @inbounds vyi[i] = 0.0
-        @inbounds vzi[i] = 0.0
-        @inbounds d[i] = 0.0
+         xi[i] = w.particles[i]._x
+         yi[i] = w.particles[i]._y
+         zi[i] = w.particles[i]._z
+         vxi[i] = 0.0
+         vyi[i] = 0.0
+         vzi[i] = 0.0
     end
     test_particle_x  = SharedArray(Float64, n_test_particle)
     test_particle_y  = SharedArray(Float64, n_test_particle)
@@ -59,8 +56,8 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
         createtree(w),
         w,
         ti,  # t
-        0.0, # dt
         ti,  # ti
+        0.0, # dt
         tf,  # tf
         stepc,   # stepf::Int64
         xi, yi, zi, vxi, vyi, vzi,
