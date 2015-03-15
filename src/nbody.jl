@@ -11,6 +11,7 @@ using GeometricalPredicates
 
 # TODO: change these to submodules...
 
+include("units.jl")
 include("cosmology.jl")
 include("space/common.jl")
 include("space/newtonian.jl")

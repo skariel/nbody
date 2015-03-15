@@ -1,3 +1,31 @@
+function calc_dt(sim::Simulation{Newtonian}, simulate_test_particles::Bool)
+    mindt2 = 1.e30 # infinity, ha!
+    # real particles
+    @inline for i in 1:sim.w.n
+        const a2 = sim.w.ax[i]*sim.w.ax[i] + sim.w.ay[i]*sim.w.ay[i] + sim.w.az[i]*sim.w.az[i]
+        const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
+        if dyn_dt2 < mindt2
+            mindt2 = dyn_dt2
+        end
+    end
+    if simulate_test_particles
+        # test particles
+        @inline for i in 1:length(sim.test_particle_x)
+            const a2 = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
+            const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
+            if dyn_dt2 < mindt2
+                mindt2 = dyn_dt2
+            end
+        end
+    end
+    mindt = sqrt(mindt2)
+    # TODO: parametrize this aspect ie maximal timestep in both cosmological and newtonian simulations
+    if is(typeof(sim.w), World{Cosmological}) && mindt > 0.05
+        mindt = 0.05
+    end
+    mindt
+end
+
 function kick!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; dt=0.0)
     # real particles
     @inline for i in 1:sim.w.n
@@ -49,5 +77,49 @@ function calc_accel!(sim::Simulation{Newtonian}, simulate_test_particles::Bool)
     else
         calc_accel!(sim.w)
     end
+    nothing
+end
+
+function exec!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; use_brute_force=false, silent=false)
+    reset!(sim)
+    tic()
+    calc_accel!(sim, simulate_test_particles)
+    break_time = false
+    while true
+        sim.step += 1
+        if sim.step % 500 == 0
+            @show sim.dt
+            @show sim.step
+            @show sim.t
+        end
+        sim.dt = calc_dt(sim, simulate_test_particles)
+        if !sim.limit_by_steps
+            if sim.t+sim.dt > sim.tf
+                sim.dt = sim.tf - sim.t
+                break_time = true
+            end
+        end
+        !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
+        tic()
+
+        kick!(sim, simulate_test_particles, dt=sim.dt/2)
+        drift!(sim, simulate_test_particles, dt=sim.dt)
+        if !use_brute_force
+            calc_accel!(sim, simulate_test_particles)
+        else
+            calc_accel_brute_force!(sim)
+        end
+        sim.t += sim.dt/2
+        kick!(sim, simulate_test_particles, dt=sim.dt/2)
+        sim.t += sim.dt/2
+
+        elapsed = toq()
+        !silent && print(" /",elapsed,"s\n")
+
+        sim.limit_by_steps && sim.step >= sim.stepf && break
+        break_time && break
+    end
+    !silent && println("\n--- Done!\n")
+    silent? toq() : toc()
     nothing
 end

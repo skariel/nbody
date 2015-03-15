@@ -2,17 +2,17 @@
 
 @inline function calculate_accel_on_particle!(w::World{Cosmological}, i::Int64)
     __calculate_accel_on_particle!(w,i)
-    @inline w.ax[i] /= w.space.a
-    @inline w.ay[i] /= w.space.a
-    @inline w.az[i] /= w.space.a
+    @inline w.ax[i] += FAC1*w.particles[i]._x
+    @inline w.ay[i] += FAC1*w.particles[i]._y
+    @inline w.az[i] += FAC1*w.particles[i]._z
 end
 
 @inline function calc_accel!(w::World{Cosmological}, rng::UnitRange{Int64})
     __calc_accel!(w, rng)
     @inline for i in rng
-        w.ax[i] /= w.space.a
-        w.ay[i] /= w.space.a
-        w.az[i] /= w.space.a
+        w.ax[i] += FAC1*w.particles[i]._x
+        w.ay[i] += FAC1*w.particles[i]._y
+        w.az[i] += FAC1*w.particles[i]._z
     end
 end
 
@@ -22,20 +22,20 @@ end
     w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
     __calc_accel!(w,tx,ty,tz,tax,tay,taz,w_rng,t_rng)
     @inline for i in w_rng
-        w.ax[i] /= w.space.a
-        w.ay[i] /= w.space.a
-        w.az[i] /= w.space.a
+        w.ax[i] += FAC1*w.particles[i]._x
+        w.ay[i] += FAC1*w.particles[i]._y
+        w.az[i] += FAC1*w.particles[i]._z
     end
     @inline for i in t_rng
-        tax[i] /= w.space.a
-        tay[i] /= w.space.a
-        taz[i] /= w.space.a
+        tax[i] += FAC1*tx[i]
+        tay[i] += FAC1*ty[i]
+        taz[i] += FAC1*tz[i]
     end
 end
 
 @inline function calc_accel(p::Particle, tree::CompiledOctTree{Particle}, w::World{Cosmological})
     ax, ay, az = __calc_accel(p, tree, w)
-    ax /= w.space.a
-    ay /= w.space.a
-    az /= w.space.a
+    ax += FAC1*p._x
+    ay += FAC1*p._y
+    az += FAC1*p._z
 end

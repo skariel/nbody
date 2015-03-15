@@ -71,7 +71,7 @@ end
 
     const smthdr2 = dr2+data.w.smth2
     const smthdr = sqrt(smthdr2)
-    const denom = smthdr2*smthdr/q.point._m
+    const denom = smthdr2*smthdr/q.point._m/G
     data.ax += dx/denom
     data.ay += dy/denom
     data.az += dz/denom
