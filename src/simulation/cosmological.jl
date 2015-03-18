@@ -123,3 +123,19 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
     silent? toq() : toc()
     nothing
 end
+
+function set_zeldovich!(sim::Simulation, simulate_test_particles::Bool)
+    calc_accel!(sim, simulate_test_particles)
+    ah = sim.t*Ha(sim.t, sim.w)
+    fac1 = 2.0/3.0/ah
+    for i in 1:sim.w.n
+        sim.w.vxi[i] = sim.w.ax[i]*fac1
+        sim.w.vyi[i] = sim.w.ay[i]*fac1
+        sim.w.vzi[i] = sim.w.az[i]*fac1
+    end
+    if simulate_test_particles
+        sim.test_particle_vx[i] = sim.test_particle_ax[i]*fac1
+        sim.test_particle_vy[i] = sim.test_particle_ay[i]*fac1
+        sim.test_particle_vz[i] = sim.test_particle_az[i]*fac1
+    end
+end
