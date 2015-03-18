@@ -1,6 +1,6 @@
 # simple Gadget2 save/load functionality
 
-function save(w::World, fn::String; t=0.0)
+function save_G2(w::World, fn::String, t)
     open(fn, "w") do f
 
         #
@@ -19,14 +19,13 @@ function save(w::World, fn::String; t=0.0)
         write(f, int32(0)) # flag cooling
         write(f, int32(1)) # number of files in each snapshot
         write(f, 0.0) # box size
-        write(f, 1.0) # Ω_0
-        write(f, 0.0) # Ω_Λ
+        write(f, w.Ω0) # Ω_0
+        write(f, w.ΩΛ) # Ω_Λ
         write(f, 2./3) # h
         # padding with zeros
         while position(f) < 256+4
             write(f, uint8(0x00))
         end
-        @show position(f)
         write(f, int32(256))
 
         #
@@ -45,7 +44,11 @@ function save(w::World, fn::String; t=0.0)
         ########################
         write(f, int32(4*w.n*3))
         for i in 1:w.n
-            write(f, [float32(w.vx[i]), float32(w.vy[i]), float32(w.vz[i])])
+            write(f, [
+                float32(w.vx[i]/(t.^(3/2))),
+                float32(w.vy[i]/(t.^(3/2))),
+                float32(w.vz[i]/(t.^(3/2)))
+            ])
         end
         write(f, int32(4*w.n*3))
 
@@ -62,7 +65,7 @@ function save(w::World, fn::String; t=0.0)
     end
 end
 
-function load(fn::String)
+function load_G2(fn::String)
     open(fn, "r") do f
         ff=read(f,Int32)
         n = [int(read(f,Uint32)) for i in 1:6]
@@ -76,8 +79,8 @@ function load(fn::String)
         nfiles = read(f,Int32) # number of files in each snapshot
         bsize = read(f,Float64) # box size
         Ω0 = read(f,Float64)
-        @show ΩΛ = read(f,Float64)
-        @show h = read(f,Float64)
+        ΩΛ = read(f,Float64)
+        h = read(f,Float64)
         # padding...
         while position(f) < 256+4
             read(f, Uint8)
@@ -111,12 +114,17 @@ function load(fn::String)
         ff=read(f,Int32)
         id = [int(read(f,Int32)) for i in 1:sum(n)]
         @assert ff==read(f,Int32)
-        @show id[13]
         # TODO: build world here...
         smth=0.2
         opening_alpha=0.5
         dtfrac=0.35
         space=Cosmological
-        return World([Particle(pos_x[i],pos_y[i],pos_z[i],maximum(m)) for i in 1:sum(n)], smth, opening_alpha, dtfrac, space)
+        w = World([Particle(pos_x[i],pos_y[i],pos_z[i],maximum(m)) for i in 1:sum(n)], smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
+        for i in 1:w.n
+            w.vx[i] = vel_x[i].*(t.^(3/2))
+            w.vy[i] = vel_y[i].*(t.^(3/2))
+            w.vz[i] = vel_z[i].*(t.^(3/2))
+        end
+        return w
     end
 end

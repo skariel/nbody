@@ -1,1 +1,0 @@
-immutable Newtonian <: SpaceType end

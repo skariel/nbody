@@ -1,13 +1,27 @@
 Gravitational tree algorithm
 
-TODO:
+# TODO
+
+-- Zeldovich initial velocities for cosmological sims
+
+
+
+## performance
 
 -- Individual timesteps
 
 -- Relative opening criterion
 
--- Dynamic update tree
+-- Dynamic tree updates
 
--- Distributed execution
+-- Distributed execution (currently only shared memory)
 
-WIP!
+
+
+# DONE!!!
+
+-- fix Gadget IO to include correct units for velocities
+
+-- non-Gadget IO
+
+-- General cosmological parameters

@@ -38,6 +38,7 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
          xi[i] = w.particles[i]._x
          yi[i] = w.particles[i]._y
          zi[i] = w.particles[i]._z
+         # TODO: Zeldovich approx for cosmological sims
          vxi[i] = 0.0
          vyi[i] = 0.0
          vzi[i] = 0.0
@@ -79,12 +80,9 @@ function reset!(s::Simulation)
     end
     # set initial velocities
     for i in 1:s.w.n
-        s.w.vx[i] = 0.0
-        s.w.vy[i] = 0.0
-        s.w.vz[i] = 0.0
-        s.vxi[i] = 0.0
-        s.vyi[i] = 0.0
-        s.vzi[i] = 0.0
+        s.w.vx[i] = s.vxi[i]
+        s.w.vy[i] = s.vyi[i]
+        s.w.vz[i] = s.vzi[i]
     end
     for i in 1:length(s.test_particle_x)
         s.test_particle_vx[i] = 0.0

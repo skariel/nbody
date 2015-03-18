@@ -14,4 +14,6 @@ type World{T<:SpaceType}
     dtfrac::Float64
     space::T
     mindt::Float64
+    Ω0::Float64
+    ΩΛ::Float64
 end

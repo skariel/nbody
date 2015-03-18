@@ -2,15 +2,16 @@
 
 # for a matter dominated universe:
 
-# as function of real time
-A(t) = 0.0225*t^(2/3)
+#FD(a1,a2) = 20.0*(1./sqrt(a1)-1./sqrt(a2))
+#FK(a1,a2) = 20.0*(sqrt(a2) - sqrt(a1))
 
-# as function of expansion coefficient `a`
-Ta(a) = 296.296296*a*sqrt(a)
+# Otherwise:
 
-###################
+Ha(a, w) = 0.1*sqrt(w.Ω0/a/a/a+w.ΩΛ)
 
-FD(a1,a2) = 20.0*(1./sqrt(a1)-1./sqrt(a2))
-FK(a1,a2) = 20.0*(sqrt(a2) - sqrt(a1))
+FD(a1,a2,w) = quadgk(a->1./Ha(a,w)/a/a/a,a1,a2)[1]
+FK(a1,a2,w) = quadgk(a->1./Ha(a,w)/a/a,a1,a2)[1]
 
-Ha(a) = 0.1/a/a*sqrt(a)
+# for convenience...
+
+FAC1(w) = 0.5*H0*H0*w.Ω0

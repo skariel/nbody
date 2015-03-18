@@ -1,4 +1,4 @@
-function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, opening_alpha::Number, dtfrac::Number, space::Type{T})
+function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, opening_alpha::Number, dtfrac::Number, space::Type{T}, Ω0::Float64, ΩΛ::Float64)
     n = length(particles)
     spar = SharedArray(Particle, n)
     vx = SharedArray(Float64, n)
@@ -28,7 +28,9 @@ function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, openin
         smth*smth,
         dtfrac,
         T(),
-        0.0
+        0.0,
+        Ω0,
+        ΩΛ
     )
 end
 
@@ -47,11 +49,11 @@ function particlesspherical(n::Int64, scale=1.0, xy=false)
     hilbertsort!(particles)
 end
 
-world{T<:SpaceType}(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035, space::Type{T}=Newtonian) =
-    World(particles, smth, opening_alpha, dtfrac, space)
+world{T<:SpaceType}(particles::Array{Particle, 1}; smth=0.01, opening_alpha=0.7, dtfrac=0.035, space::Type{T}=Newtonian, Ω0=1.0, ΩΛ=0.0) =
+    World(particles, smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
 
-worldnormal{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, space::Type{T}=Newtonian) =
-    World(particlesnormal(n, scale), smth, opening_alpha, dtfrac, space)
+worldnormal{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, space::Type{T}=Newtonian, Ω0=1.0, ΩΛ=0.0) =
+    World(particlesnormal(n, scale), smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
 
-worldspherical{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false, space::Type{T}=Newtonian) =
-    World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac, space)
+worldspherical{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false, space::Type{T}=Newtonian, Ω0=1.0, ΩΛ=0.0) =
+    World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)

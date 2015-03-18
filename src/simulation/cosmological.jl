@@ -1,6 +1,6 @@
 function calc_dt(sim::Simulation{Cosmological}, simulate_test_particles::Bool)
     mindt = 1.e30 # infinity, ha!
-    hat = Ha(sim.t)*sim.t
+    hat = Ha(sim.t, sim.w)*sim.t
     # real particles
     for i in 1:sim.w.n
         const a2_nonp = sim.w.ax[i]*sim.w.ax[i] + sim.w.ay[i]*sim.w.ay[i] + sim.w.az[i]*sim.w.az[i]
@@ -26,7 +26,7 @@ end
 
 function kick!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt=0.0)
     # real particles
-    fk = FK(sim.t, sim.t+dt)
+    fk = FK(sim.t, sim.t+dt, sim.w)
     for i in 1:sim.w.n
         sim.w.vx[i] += sim.w.ax[i]*fk
         sim.w.vy[i] += sim.w.ay[i]*fk
@@ -46,7 +46,7 @@ end
 function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt=0.0)
     updatespace!(sim.t, sim.w)
     # real particles
-    fd = FD(sim.t, sim.t+dt)
+    fd = FD(sim.t, sim.t+dt, sim.w)
     for i in 1:sim.w.n
         const dx = sim.w.vx[i]*fd
         const dy = sim.w.vy[i]*fd
@@ -64,7 +64,7 @@ function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt
     nothing
 end
 
-updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
+updatespace!(t::Float64, w::World{Cosmological}) = nothing
 
 function calc_accel!(sim::Simulation{Cosmological}, simulate_test_particles::Bool)
     updatespace!(sim.t, sim.w)
