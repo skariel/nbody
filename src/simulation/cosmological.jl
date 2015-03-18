@@ -1,28 +1,20 @@
 function calc_dt(sim::Simulation{Cosmological}, simulate_test_particles::Bool)
-    mindt2 = 1.e30 # infinity, ha!
+    mindt = 1.e30 # infinity, ha!
     hat = Ha(sim.t)*sim.t
     # real particles
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         const a2_nonp = sim.w.ax[i]*sim.w.ax[i] + sim.w.ay[i]*sim.w.ay[i] + sim.w.az[i]*sim.w.az[i]
         const a2 = a2_nonp/sim.t/sim.t/sim.t/sim.t # physical accel
         const dyn_dt2 = 2.0*sim.w.dtfrac*sqrt(sim.w.smth2)*sim.t/sqrt(a2)
-        if dyn_dt2 < mindt2
-            mindt2 = dyn_dt2
+
+        const ddt = sqrt(dyn_dt2)*hat
+        sim.w.dt[i] = ddt
+
+        if ddt < mindt
+            mindt = ddt
         end
     end
-    if simulate_test_particles
-        # test particles
-        @inline for i in 1:length(sim.test_particle_x)
-            const a2_nonp = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
-            const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
-            const a2 = a2_nonp/sim.t/sim.t/sim.t/sim.t # physical accel
-            const dyn_dt2 = 2.0*sim.w.dtfrac*sqrt(sim.w.smth2)*sim.t/sqrt(a2)
-            if dyn_dt2 < mindt2
-                mindt2 = dyn_dt2
-            end
-        end
-    end
-    mindt = sqrt(mindt2)*hat
+    sim.w.mindt=mindt
     # TODO: parametrize this aspect ie maximal timestep in both cosmological and newtonian simulations
     if is(typeof(sim.w), World{Cosmological}) && mindt > 0.05
         mindt = 0.05
@@ -35,14 +27,14 @@ end
 function kick!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt=0.0)
     # real particles
     fk = FK(sim.t, sim.t+dt)
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         sim.w.vx[i] += sim.w.ax[i]*fk
         sim.w.vy[i] += sim.w.ay[i]*fk
         sim.w.vz[i] += sim.w.az[i]*fk
     end
     if simulate_test_particles
         # test particles
-        @inline for i in 1:length(sim.test_particle_x)
+        for i in 1:length(sim.test_particle_x)
             sim.test_particle_vx[i] += sim.test_particle_ax[i]*fk
             sim.test_particle_vy[i] += sim.test_particle_ay[i]*fk
             sim.test_particle_vz[i] += sim.test_particle_az[i]*fk
@@ -55,7 +47,7 @@ function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt
     updatespace!(sim.t, sim.w)
     # real particles
     fd = FD(sim.t, sim.t+dt)
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         const dx = sim.w.vx[i]*fd
         const dy = sim.w.vy[i]*fd
         const dz = sim.w.vz[i]*fd
@@ -63,7 +55,7 @@ function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt
     end
     if simulate_test_particles
         # test particles
-        @inline for i in 1:length(sim.test_particle_x)
+        for i in 1:length(sim.test_particle_x)
             sim.test_particle_x[i] += sim.test_particle_vx[i]*fd
             sim.test_particle_y[i] += sim.test_particle_vy[i]*fd
             sim.test_particle_z[i] += sim.test_particle_vz[i]*fd
@@ -72,7 +64,7 @@ function drift!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; dt
     nothing
 end
 
-@inline updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
+updatespace!(t::Float64, w::World{Cosmological}) = (w.space=Cosmological(t); nothing)
 
 function calc_accel!(sim::Simulation{Cosmological}, simulate_test_particles::Bool)
     updatespace!(sim.t, sim.w)

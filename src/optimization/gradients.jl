@@ -1,52 +1,52 @@
-function grad!(opt::Optimization, sim::Simulation)
+function grad!(opt::Optimization)
     # setup test particle positions
     D = 1.e-8
-    @inbounds for i in 1:sim.w.n
-        sim.test_particle_x[i] = sim.xi[i] + D
-        sim.test_particle_y[i] = sim.yi[i]
-        sim.test_particle_z[i] = sim.zi[i]
-        sim.test_particle_x[i+sim.w.n] = sim.xi[i]
-        sim.test_particle_y[i+sim.w.n] = sim.yi[i] + D
-        sim.test_particle_z[i+sim.w.n] = sim.zi[i]
-        sim.test_particle_x[i+2sim.w.n] = sim.xi[i]
-        sim.test_particle_y[i+2sim.w.n] = sim.yi[i]
-        sim.test_particle_z[i+2sim.w.n] = sim.zi[i] + D
+     for i in 1:opt.sim.w.n
+        opt.sim.test_particle_x[i] = opt.sim.xi[i] + D
+        opt.sim.test_particle_y[i] = opt.sim.yi[i]
+        opt.sim.test_particle_z[i] = opt.sim.zi[i]
+        opt.sim.test_particle_x[i+opt.sim.w.n] = opt.sim.xi[i]
+        opt.sim.test_particle_y[i+opt.sim.w.n] = opt.sim.yi[i] + D
+        opt.sim.test_particle_z[i+opt.sim.w.n] = opt.sim.zi[i]
+        opt.sim.test_particle_x[i+2opt.sim.w.n] = opt.sim.xi[i]
+        opt.sim.test_particle_y[i+2opt.sim.w.n] = opt.sim.yi[i]
+        opt.sim.test_particle_z[i+2opt.sim.w.n] = opt.sim.zi[i] + D
     end
 
     # run the simulation with these test particles
-    exec!(sim, true; silent=true)
+    exec!(opt.sim, true; silent=true)
 
     # calculate gradient for each particle
-    @inbounds for i in 1:sim.w.n
-        dx_o = sim.w.particles[i]._x - opt.x0[i]
-        dy_o = sim.w.particles[i]._y - opt.y0[i]
-        dz_o = sim.w.particles[i]._z - opt.z0[i]
+     for i in 1:opt.sim.w.n
+        dx_o = opt.sim.w.particles[i]._x - opt.x0[i]
+        dy_o = opt.sim.w.particles[i]._y - opt.y0[i]
+        dz_o = opt.sim.w.particles[i]._z - opt.z0[i]
         d2_o = dx_o*dx_o+dy_o*dy_o+dz_o*dz_o
 
-        dx_n = sim.test_particle_x[i] - opt.x0[i]
-        dy_n = sim.test_particle_y[i] - opt.y0[i]
-        dz_n = sim.test_particle_z[i] - opt.z0[i]
+        dx_n = opt.sim.test_particle_x[i] - opt.x0[i]
+        dy_n = opt.sim.test_particle_y[i] - opt.y0[i]
+        dz_n = opt.sim.test_particle_z[i] - opt.z0[i]
         opt.gx[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
 
-        dx_n = sim.test_particle_x[i+sim.w.n] - opt.x0[i]
-        dy_n = sim.test_particle_y[i+sim.w.n] - opt.y0[i]
-        dz_n = sim.test_particle_z[i+sim.w.n] - opt.z0[i]
+        dx_n = opt.sim.test_particle_x[i+opt.sim.w.n] - opt.x0[i]
+        dy_n = opt.sim.test_particle_y[i+opt.sim.w.n] - opt.y0[i]
+        dz_n = opt.sim.test_particle_z[i+opt.sim.w.n] - opt.z0[i]
         opt.gy[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
 
-        dx_n = sim.test_particle_x[i+2sim.w.n] - opt.x0[i]
-        dy_n = sim.test_particle_y[i+2sim.w.n] - opt.y0[i]
-        dz_n = sim.test_particle_z[i+2sim.w.n] - opt.z0[i]
+        dx_n = opt.sim.test_particle_x[i+2opt.sim.w.n] - opt.x0[i]
+        dy_n = opt.sim.test_particle_y[i+2opt.sim.w.n] - opt.y0[i]
+        dz_n = opt.sim.test_particle_z[i+2opt.sim.w.n] - opt.z0[i]
         opt.gz[i] = (dx_n*dx_n+dy_n*dy_n+dz_n*dz_n - d2_o)/D
     end
     nothing
 end
 
-function grade(opt::Optimization, sim::Simulation)
+function grade(opt::Optimization)
     g = 0.0
-    @inbounds for i in 1:sim.w.n
-        dx = sim.w.particles[i]._x - opt.x0[i]
-        dy = sim.w.particles[i]._y - opt.y0[i]
-        dz = sim.w.particles[i]._z - opt.z0[i]
+     for i in 1:opt.sim.w.n
+        dx = opt.sim.w.particles[i]._x - opt.x0[i]
+        dy = opt.sim.w.particles[i]._y - opt.y0[i]
+        dz = opt.sim.w.particles[i]._z - opt.z0[i]
         g += dx*dx+dy*dy+dz*dz
     end
     g

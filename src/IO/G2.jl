@@ -8,56 +8,56 @@ function save(w::World, fn::String; t=0.0)
         #
         ########################
 
-        write(f, Int32(256))
-        write(f, [UInt32(0), UInt32(w.n), UInt32(0), UInt32(0), UInt32(0), UInt32(0)])
+        write(f, int32(256))
+        write(f, [uint32(0), uint32(w.n), uint32(0), uint32(0), uint32(0), uint32(0)])
         write(f, [0.0, w.particles[1]._m, 0.0, 0.0, 0.0, 0.0])
         write(f, t)
         write(f, 1./t-1.)
-        write(f, Int32(0)) # flag SFR
-        write(f, Int32(0)) # flag feedback
-        write(f, [Int32(0), Int32(w.n), Int32(0), Int32(0), Int32(0), Int32(0)]) # Nall
-        write(f, Int32(0)) # flag cooling
-        write(f, Int32(1)) # number of files in each snapshot
+        write(f, int32(0)) # flag SFR
+        write(f, int32(0)) # flag feedback
+        write(f, [int32(0), int32(w.n), int32(0), int32(0), int32(0), int32(0)]) # Nall
+        write(f, int32(0)) # flag cooling
+        write(f, int32(1)) # number of files in each snapshot
         write(f, 0.0) # box size
         write(f, 1.0) # Ω_0
         write(f, 0.0) # Ω_Λ
         write(f, 2./3) # h
         # padding with zeros
         while position(f) < 256+4
-            write(f, UInt8(0x00))
+            write(f, uint8(0x00))
         end
         @show position(f)
-        write(f, Int32(256))
+        write(f, int32(256))
 
         #
         #      POSITIONS!
         #
         ########################
-        write(f, Int32(4*w.n*3))
+        write(f, int32(4*w.n*3))
         for p in w.particles
-            write(f, [Float32(p._x), Float32(p._y), Float32(p._z)])
+            write(f, [float32(p._x), float32(p._y), float32(p._z)])
         end
-        write(f, Int32(4*w.n*3))
+        write(f, int32(4*w.n*3))
 
         #
         #      VELOCITIES!
         #
         ########################
-        write(f, Int32(4*w.n*3))
+        write(f, int32(4*w.n*3))
         for i in 1:w.n
-            write(f, [Float32(w.vx[i]), Float32(w.vy[i]), Float32(w.vz[i])])
+            write(f, [float32(w.vx[i]), float32(w.vy[i]), float32(w.vz[i])])
         end
-        write(f, Int32(4*w.n*3))
+        write(f, int32(4*w.n*3))
 
         #
         #      IDs!
         #
         ########################
-        write(f, Int32(4*w.n))
+        write(f, int32(4*w.n))
         for i in 1:w.n
-            write(f, Int32(i))
+            write(f, int32(i))
         end
-        write(f, Int32(4*w.n))
+        write(f, int32(4*w.n))
 
     end
 end
@@ -65,13 +65,13 @@ end
 function load(fn::String)
     open(fn, "r") do f
         ff=read(f,Int32)
-        n = [Int(read(f,UInt32)) for i in 1:6]
+        n = [int(read(f,Uint32)) for i in 1:6]
         m = [read(f,Float64) for i in 1:6]
         t = read(f,Float64)
         z = read(f,Float64)
         fsfr = read(f,Int32)
         ffbk = read(f,Int32)
-        n = [Int(read(f,Int32)) for i in 1:6]
+        n = [int(read(f,Int32)) for i in 1:6]
         fcool = read(f,Int32) # flag cooling
         nfiles = read(f,Int32) # number of files in each snapshot
         bsize = read(f,Float64) # box size
@@ -80,7 +80,7 @@ function load(fn::String)
         @show h = read(f,Float64)
         # padding...
         while position(f) < 256+4
-            read(f, UInt8)
+            read(f, Uint8)
         end
         @assert ff==read(f,Int32)
 
@@ -90,9 +90,9 @@ function load(fn::String)
         pos_y = Float64[]
         pos_z = Float64[]
         for i in 1:sum(n)
-            push!(pos_x, Float64(read(f,Float32)))
-            push!(pos_y, Float64(read(f,Float32)))
-            push!(pos_z, Float64(read(f,Float32)))
+            push!(pos_x, float64(read(f,Float32)))
+            push!(pos_y, float64(read(f,Float32)))
+            push!(pos_z, float64(read(f,Float32)))
         end
         @assert ff==read(f,Int32)
 
@@ -102,14 +102,14 @@ function load(fn::String)
         vel_y = Float64[]
         vel_z = Float64[]
         for i in 1:sum(n)
-            push!(vel_x, Float64(read(f,Float32)))
-            push!(vel_y, Float64(read(f,Float32)))
-            push!(vel_z, Float64(read(f,Float32)))
+            push!(vel_x, float64(read(f,Float32)))
+            push!(vel_y, float64(read(f,Float32)))
+            push!(vel_z, float64(read(f,Float32)))
         end
         @assert ff==read(f,Int32)
 
         ff=read(f,Int32)
-        id = [Int(read(f,Int32)) for i in 1:sum(n)]
+        id = [int(read(f,Int32)) for i in 1:sum(n)]
         @assert ff==read(f,Int32)
         @show id[13]
         # TODO: build world here...

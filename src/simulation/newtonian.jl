@@ -1,7 +1,7 @@
 function calc_dt(sim::Simulation{Newtonian}, simulate_test_particles::Bool)
     mindt2 = 1.e30 # infinity, ha!
     # real particles
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         const a2 = sim.w.ax[i]*sim.w.ax[i] + sim.w.ay[i]*sim.w.ay[i] + sim.w.az[i]*sim.w.az[i]
         const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
         if dyn_dt2 < mindt2
@@ -10,7 +10,7 @@ function calc_dt(sim::Simulation{Newtonian}, simulate_test_particles::Bool)
     end
     if simulate_test_particles
         # test particles
-        @inline for i in 1:length(sim.test_particle_x)
+        for i in 1:length(sim.test_particle_x)
             const a2 = sim.test_particle_ax[i]*sim.test_particle_ax[i] + sim.test_particle_ay[i]*sim.test_particle_ay[i] + sim.test_particle_az[i]*sim.test_particle_az[i]
             const dyn_dt2 = sqrt(sim.w.smth2/a2)*sim.w.dtfrac*sim.w.dtfrac
             if dyn_dt2 < mindt2
@@ -28,14 +28,14 @@ end
 
 function kick!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; dt=0.0)
     # real particles
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         sim.w.vx[i] += sim.w.ax[i]*dt
         sim.w.vy[i] += sim.w.ay[i]*dt
         sim.w.vz[i] += sim.w.az[i]*dt
     end
     if simulate_test_particles
         # test particles
-        @inline for i in 1:length(sim.test_particle_x)
+        for i in 1:length(sim.test_particle_x)
             sim.test_particle_vx[i] += sim.test_particle_ax[i]*dt
             sim.test_particle_vy[i] += sim.test_particle_ay[i]*dt
             sim.test_particle_vz[i] += sim.test_particle_az[i]*dt
@@ -47,7 +47,7 @@ end
 
 function drift!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; dt=0.0)
     # real particles
-    @inline for i in 1:sim.w.n
+    for i in 1:sim.w.n
         const dx = sim.w.vx[i]*dt
         const dy = sim.w.vy[i]*dt
         const dz = sim.w.vz[i]*dt
@@ -55,7 +55,7 @@ function drift!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; dt=0.
     end
     if simulate_test_particles
         # test particles
-        @inline for i in 1:length(sim.test_particle_x)
+        for i in 1:length(sim.test_particle_x)
             sim.test_particle_x[i] += sim.test_particle_vx[i]*dt
             sim.test_particle_y[i] += sim.test_particle_vy[i]*dt
             sim.test_particle_z[i] += sim.test_particle_vz[i]*dt
@@ -65,7 +65,7 @@ function drift!(sim::Simulation{Newtonian}, simulate_test_particles::Bool; dt=0.
 end
 
 
-@inline updatespace!(t::Float64, w::World{Newtonian}) = nothing
+updatespace!(t::Float64, w::World{Newtonian}) = nothing
 
 function calc_accel!(sim::Simulation{Newtonian}, simulate_test_particles::Bool)
     updatespace!(sim.t, sim.w)

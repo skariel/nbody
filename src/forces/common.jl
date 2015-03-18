@@ -1,4 +1,4 @@
-@inline function modify(q::OctTreeNode{Particle}, p::Particle)
+function modify(q::OctTreeNode{Particle}, p::Particle)
     const total_mass = q.point._m + p._m
     const newx = (q.point._x*q.point._m + p._x*p._m)/total_mass
     const newy = (q.point._y*q.point._m + p._y*p._m)/total_mass
@@ -7,13 +7,13 @@
     nothing
 end
 
-@inline createtree(w::World) = OctTree(Particle; n=int(3.9*w.n))
+createtree(w::World) = OctTree(Particle; n=round(Int,3.9*w.n))
 
 function buildtree!(w::World, tree::OctTree{Particle})
     clear!(tree)
     # calculate new boundries same extent on both x and y
-    minc = Float64(1.e30)
-    maxc = Float64(-1.e30)
+    minc = float64(1.e30)
+    maxc = float64(-1.e30)
     for i in 1:w.n
         const p = w.particles[i]
         if p._x < minc
@@ -38,7 +38,7 @@ function buildtree!(w::World, tree::OctTree{Particle})
     r = 0.5*(maxc-minc)
     md= 0.5*(maxc+minc)
     initnode!(tree.head, r*1.05, md, md, md)
-    insert!(tree, deepcopy(w.particles), Modify)
+    insert!(tree, w.particles, Modify)
     compile!(w.tree, tree)
     nothing
 end
@@ -53,7 +53,7 @@ type DataToCalculateAccelOnParticle{T<:SpaceType}
     w::World{T}
 end
 
-@inline function stop_cond(q::CompiledOctTreeNode, data::DataToCalculateAccelOnParticle)
+function stop_cond(q::CompiledOctTreeNode, data::DataToCalculateAccelOnParticle)
     const dx = q.point._x - data.px
     const dy = q.point._y - data.py
     const dz = q.point._z - data.pz
@@ -81,7 +81,7 @@ end
 
 function __calculate_accel_on_particle!(w::World, i::Int64)
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
-    @inbounds const p = w.particles[i]
+     const p = w.particles[i]
     data.ax = 0.0
     data.ay = 0.0
     data.az = 0.0
@@ -89,15 +89,15 @@ function __calculate_accel_on_particle!(w::World, i::Int64)
     data.py = p._y
     data.pz = p._z
     map(w.tree, data)
-    @inbounds w.ax[i] = data.ax
-    @inbounds w.ay[i] = data.ay
-    @inbounds w.az[i] = data.az
+     w.ax[i] = data.ax
+     w.ay[i] = data.ay
+     w.az[i] = data.az
     nothing
 end
 
 function __calc_accel!(w::World, rng::UnitRange{Int64})
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
-    @inbounds for i in rng
+     for i in rng
         const p = w.particles[i]
         data.ax = 0.0
         data.ay = 0.0
@@ -115,7 +115,7 @@ end
 
 function __calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Float64, 1}, tz::SharedArray{Float64, 1}, tax::SharedArray{Float64, 1}, tay::SharedArray{Float64, 1}, taz::SharedArray{Float64, 1}, w_rng::UnitRange{Int64}, t_rng::UnitRange{Int64})
     data = DataToCalculateAccelOnParticle(0.0,0.0,0.0,0.0,0.0,0.0,w)
-    @inbounds for i in w_rng
+     for i in w_rng
         p = w.particles[i]
         data.ax = 0.0
         data.ay = 0.0
@@ -128,7 +128,7 @@ function __calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Fl
         w.ay[i] = data.ay
         w.az[i] = data.az
     end
-    @inbounds for i in t_rng
+     for i in t_rng
         data.ax = 0.0
         data.ay = 0.0
         data.az = 0.0

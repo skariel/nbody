@@ -5,6 +5,7 @@ type Optimization
     gx::SharedArray{Float64,1}
     gy::SharedArray{Float64,1}
     gz::SharedArray{Float64,1}
+    sim::Simulation
     function Optimization(sim::Simulation)
         x0 = SharedArray(Float64, sim.w.n)
         y0 = SharedArray(Float64, sim.w.n)
@@ -13,35 +14,35 @@ type Optimization
         gy = SharedArray(Float64, sim.w.n)
         gz = SharedArray(Float64, sim.w.n)
         for i in 1:sim.w.n
-            @inbounds x0[i] = sim.xi[i]
-            @inbounds y0[i] = sim.yi[i]
-            @inbounds z0[i] = sim.zi[i]
-            @inbounds gx[i] = 0.0
-            @inbounds gy[i] = 0.0
-            @inbounds gz[i] = 0.0
+             x0[i] = sim.xi[i]
+             y0[i] = sim.yi[i]
+             z0[i] = sim.zi[i]
+             gx[i] = 0.0
+             gy[i] = 0.0
+             gz[i] = 0.0
         end
-        new(x0,y0,z0, gx,gy,gz)
+        new(x0,y0,z0, gx,gy,gz, sim)
     end
 end
 
-function evolve_ics!(opt::Optimization, sim::Simulation, fact::Float64)
-    @inbounds for i in 1:sim.w.n
-        sim.xi[i] -= opt.gx[i]*fact
-        sim.yi[i] -= opt.gy[i]*fact
-        sim.zi[i] -= opt.gz[i]*fact
+function evolve_ics!(opt::Optimization, fact::Float64)
+     for i in 1:opt.sim.w.n
+        opt.sim.xi[i] -= opt.gx[i]*fact
+        opt.sim.yi[i] -= opt.gy[i]*fact
+        opt.sim.zi[i] -= opt.gz[i]*fact
     end
 end
 
-function grade(opt::Optimization, sim::Simulation, fact::Float64)
-    evolve_ics!(opt, sim, fact)
-    exec!(sim, false, silent=true)
-    res = grade(opt, sim)
-    evolve_ics!(opt, sim, -fact)
+function grade(opt::Optimization, fact::Float64)
+    evolve_ics!(opt, fact)
+    exec!(opt.sim, false, silent=true)
+    res = grade(opt)
+    evolve_ics!(opt, -fact)
     res
 end
 
-function search!(opt::Optimization, sim::Simulation, shaking=false)
-    curr_grade = grade(opt, sim)
+function search!(opt::Optimization, shaking=false)
+    curr_grade = grade(opt)
     iter = 0
     fa = 0.3
     fb = 0.7
@@ -53,11 +54,11 @@ function search!(opt::Optimization, sim::Simulation, shaking=false)
         iter += 1
 
         if recalc_a
-            a = grade(opt, sim, fa)
+            a = grade(opt, fa)
             recalc_a = false
         end
         if recalc_b
-            b = grade(opt, sim, fb)
+            b = grade(opt, fb)
             recalc_b = false
         end
 
@@ -81,43 +82,43 @@ function search!(opt::Optimization, sim::Simulation, shaking=false)
 
     end
     if recalc_a
-        a = grade(opt, sim, fa)
+        a = grade(opt, fa)
     end
     if recalc_b
-        b = grade(opt, sim, fb)
+        b = grade(opt, fb)
     end
     (g,f) = a<b ? (a,fa):(b,fb)
     dgrade = g/curr_grade
-    if !shaking && dgrade > 0.9
+    if !shaking && dgrade > 0.97
         # shake!
         println("Shaking!")
-        @inbounds for i in 1:sim.w.n
+         for i in 1:opt.sim.w.n
             opt.gx[i] = randn()
             opt.gy[i] = randn()
             opt.gz[i] = randn()
         end
-        return search!(opt,sim,true)
+        return search!(opt,true)
     end
     println("   - ls: iter=",iter," dgrade=",dgrade, " f=", f)
     f
 end
 
-function optimize(opt::Optimization, sim::Simulation, maxstep=10, ming=0.001)
+function optimize(opt::Optimization, maxstep=10, ming=0.001)
     step = 1
     g = 1.e30 # infinity, ha!
     while step <= maxstep && g > ming
-        exec!(sim, false, silent=true)
-        g = grade(opt,sim)
+        exec!(opt.sim, false, silent=true)
+        g = grade(opt)
         println("step=",step," grade=",g)
 
         # getting the gradient
-        grad!(opt, sim)
+        grad!(opt)
 
         # linear search
-        fact = search!(opt, sim)
+        fact = search!(opt)
 
         # evolve the ics
-        evolve_ics!(opt, sim, fact)
+        evolve_ics!(opt, fact)
 
         step += 1
     end

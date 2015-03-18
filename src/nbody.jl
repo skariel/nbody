@@ -29,7 +29,8 @@ include("forces/cosmological.jl")
 include("optimization/optimization.jl")
 include("optimization/gradients.jl")
 include("plotting.jl")
-include("G2.jl")
+include("IO/G2.jl")
+include("IO/nbody.jl")
 
 #include("../test/test.jl")
 

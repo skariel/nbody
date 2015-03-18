@@ -7,25 +7,28 @@ function World{T<:SpaceType}(particles::Array{Particle, 1}, smth::Number, openin
     ax = SharedArray(Float64, n)
     ay = SharedArray(Float64, n)
     az = SharedArray(Float64, n)
+    dt = SharedArray(Float64, n)
 
     for i in 1:n
-        @inbounds spar[i] = particles[i]
-        @inbounds vx[i] = 0.0
-        @inbounds vy[i] = 0.0
-        @inbounds vz[i] = 0.0
-        @inbounds ax[i] = 0.0
-        @inbounds ay[i] = 0.0
-        @inbounds az[i] = 0.0
+         spar[i] = particles[i]
+         vx[i] = 0.0
+         vy[i] = 0.0
+         vz[i] = 0.0
+         ax[i] = 0.0
+         ay[i] = 0.0
+         az[i] = 0.0
+         dt[i] = 0.0
     end
     World{space}(
-        CompiledOctTree(int(1.8*n), Particle),
+        CompiledOctTree(round(Int,1.8*n), Particle),
         spar,
-        vx,vy,vz,ax,ay,az,
+        vx,vy,vz,ax,ay,az, dt,
         n,
         opening_alpha^2,
         smth*smth,
         dtfrac,
-        T()
+        T(),
+        0.0
     )
 end
 
