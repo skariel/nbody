@@ -1,7 +1,7 @@
 function grad!(opt::Optimization)
     # setup test particle positions
-    D = 1.e-8
-     for i in 1:opt.sim.w.n
+    D = sqrt(opt.sim.w.smth2)/200000
+    for i in 1:opt.sim.w.n
         opt.sim.test_particle_x[i] = opt.sim.xi[i] + D
         opt.sim.test_particle_y[i] = opt.sim.yi[i]
         opt.sim.test_particle_z[i] = opt.sim.zi[i]
@@ -42,12 +42,11 @@ function grad!(opt::Optimization)
 end
 
 function grade(opt::Optimization)
-    g = 0.0
-     for i in 1:opt.sim.w.n
+    for i in 1:opt.sim.w.n
         dx = opt.sim.w.particles[i]._x - opt.x0[i]
         dy = opt.sim.w.particles[i]._y - opt.y0[i]
         dz = opt.sim.w.particles[i]._z - opt.z0[i]
-        g += dx*dx+dy*dy+dz*dz
+        opt.grad[i] = dx*dx+dy*dy+dz*dz
     end
-    g
+    mean(opt.grad)
 end

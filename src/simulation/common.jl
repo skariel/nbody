@@ -53,7 +53,7 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
     test_particle_ay = SharedArray(Float64, n_test_particle)
     test_particle_az = SharedArray(Float64, n_test_particle)
 
-    Simulation{T}(
+    sim = Simulation{T}(
         createtree(w),
         w,
         ti,  # t
@@ -68,6 +68,10 @@ function Simulation{T<:SpaceType}(w::World{T}; ti=0.0, tf=1.0, stepc=100, limit_
         0, # step::Int64
         limit_by_steps # limit_by_steps::Bool
     )
+    if is(typeof(sim), Simulation{Cosmological})
+        set_zeldovich!(sim, true)
+    end
+    sim
 end
 
 function reset!(s::Simulation)
@@ -88,5 +92,8 @@ function reset!(s::Simulation)
         s.test_particle_vx[i] = 0.0
         s.test_particle_vy[i] = 0.0
         s.test_particle_vz[i] = 0.0
+    end
+    if is(typeof(s), Simulation{Cosmological})
+        set_zeldovich!(s, true)
     end
 end

@@ -65,7 +65,7 @@ function stop_cond(q::CompiledOctTreeNode, data::DataToCalculateAccelOnParticle)
     const dz2 = dz*dz
     const dr2 = dx2 + dy2 + dz2
 
-    dr2 < 1.e-6*1.e-6 && return true
+    dr2 < data.w.smth2/200000.0/200000.0*200.0*200.0 && return true
 
     q.l > 0 && q.l*q.l/dr2 > data.w.opening_alpha2 && return false # we need to further open the node
 
@@ -128,17 +128,19 @@ function __calc_accel!(w::World, tx::SharedArray{Float64, 1}, ty::SharedArray{Fl
         w.ay[i] = data.ay
         w.az[i] = data.az
     end
-     for i in t_rng
-        data.ax = 0.0
-        data.ay = 0.0
-        data.az = 0.0
-        data.px = tx[i]
-        data.py = ty[i]
-        data.pz = tz[i]
-        map(w.tree, data)
-        tax[i] = data.ax
-        tay[i] = data.ay
-        taz[i] = data.az
+    if t_rng.start > 0
+        for i in t_rng
+            data.ax = 0.0
+            data.ay = 0.0
+            data.az = 0.0
+            data.px = tx[i]
+            data.py = ty[i]
+            data.pz = tz[i]
+            map(w.tree, data)
+            tax[i] = data.ax
+            tay[i] = data.ay
+            taz[i] = data.az
+        end
     end
     nothing
 end

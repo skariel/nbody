@@ -63,15 +63,20 @@ function save_G2(w::World, fn::String, t)
         write(f, int32(4*w.n))
 
     end
+    nothing
 end
 
 function load_G2(fn::String)
     open(fn, "r") do f
         ff=read(f,Int32)
         n = [int(read(f,Uint32)) for i in 1:6]
+        @show n
         m = [read(f,Float64) for i in 1:6]
-        t = read(f,Float64)
-        z = read(f,Float64)
+        @show m
+        @show t = read(f,Float64)
+        @show z = read(f,Float64)
+        @show z
+        @show t
         fsfr = read(f,Int32)
         ffbk = read(f,Int32)
         n = [int(read(f,Int32)) for i in 1:6]

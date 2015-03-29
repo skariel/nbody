@@ -57,3 +57,42 @@ worldnormal{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, 
 
 worldspherical{T<:SpaceType}(n::Int64; smth=0.01, opening_alpha=0.7, dtfrac=0.035, scale=1.0, xy=false, space::Type{T}=Newtonian, Ω0=1.0, ΩΛ=0.0) =
     World(particlesspherical(n, scale, xy), smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
+
+function filter_r{T<:SpaceType}(w::World{T}, r::Float64)
+    particle_arr = Particle[]
+    vx = Float64[]
+    vy = Float64[]
+    vz = Float64[]
+    rt_2 = r*r
+    xs = [p._x for p in w.particles]
+    d = 0.5*(maximum(xs) + minimum(xs))
+    for i in 1:w.n
+        p = w.particles[i]
+        x = p._x - d
+        y = p._y - d
+        z = p._z - d
+        r2 = x*x+y*y+z*z
+        if r2 < rt_2
+            push!(particle_arr, Particle(x, y, z, p._m))
+            push!(vx, w.vx[i])
+            push!(vy, w.vy[i])
+            push!(vz, w.vz[i])
+        end
+    end
+    mvx = mean(vx)
+    mvy = mean(vy)
+    mvz = mean(vz)
+    @show smth = sqrt(w.smth2)
+    @show opening_alpha = sqrt(w.opening_alpha2)
+    @show dtfrac = w.dtfrac
+    @show space = typeof(w.space)
+    @show Ω0 = w.Ω0
+    @show ΩΛ = w.ΩΛ
+    new_world = World(particle_arr, smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
+    for i in 1:new_world.n
+        new_world.vx[i] = vx[i]-mvx
+        new_world.vy[i] = vy[i]-mvy
+        new_world.vz[i] = vz[i]-mvz
+    end
+    new_world
+end

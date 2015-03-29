@@ -29,10 +29,12 @@ function calc_accel!(w::World{Cosmological},
         w.ay[i] += F1*w.particles[i]._y
         w.az[i] += F1*w.particles[i]._z
     end
-    for i in t_rng
-        tax[i] += F1*tx[i]
-        tay[i] += F1*ty[i]
-        taz[i] += F1*tz[i]
+    if t_rng.start > 0
+        for i in t_rng
+            tax[i] += F1*tx[i]
+            tay[i] += F1*ty[i]
+            taz[i] += F1*tz[i]
+        end
     end
 end
 

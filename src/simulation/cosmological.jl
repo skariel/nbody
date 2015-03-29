@@ -81,7 +81,6 @@ end
 
 function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use_brute_force=false, silent=false)
     reset!(sim)
-    set_zeldovich!(sim, simulate_test_particles)
     tic()
     calc_accel!(sim, simulate_test_particles)
     break_time = false
@@ -101,7 +100,8 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
             end
         end
         !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
-        tic()
+        tic()00
+
 
         kick!(sim, simulate_test_particles, dt=sim.dt/2)
         drift!(sim, simulate_test_particles, dt=sim.dt)
@@ -126,17 +126,23 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
 end
 
 function set_zeldovich!(sim::Simulation, simulate_test_particles::Bool)
+    afac = 3.0/2.0*((0.05-sim.ti)/(0.05-1/51))
+    if afac < 0.0
+        afac = 0.0
+    end
     calc_accel!(sim, simulate_test_particles)
     ah = sim.t*Ha(sim.t, sim.w)
-    fac1 = 2.0/3.0/ah
+    fac1 = 2.0/3.0/ah*afac
     for i in 1:sim.w.n
         sim.w.vx[i] = sim.w.ax[i]*fac1
         sim.w.vy[i] = sim.w.ay[i]*fac1
         sim.w.vz[i] = sim.w.az[i]*fac1
     end
     if simulate_test_particles
-        sim.test_particle_vx[i] = sim.test_particle_ax[i]*fac1
-        sim.test_particle_vy[i] = sim.test_particle_ay[i]*fac1
-        sim.test_particle_vz[i] = sim.test_particle_az[i]*fac1
+        for i in 1:length(sim.test_particle_x)
+            sim.test_particle_vx[i] = sim.test_particle_ax[i]*fac1
+            sim.test_particle_vy[i] = sim.test_particle_ay[i]*fac1
+            sim.test_particle_vz[i] = sim.test_particle_az[i]*fac1
+        end
     end
 end
