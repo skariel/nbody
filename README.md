@@ -2,7 +2,7 @@ Gravitational tree algorithm
 
 # TODO
 
--- Zeldovich initial velocities for cosmological sims
+-- some API cleanup
 
 
 
@@ -19,6 +19,8 @@ Gravitational tree algorithm
 
 
 # DONE!!!
+
+-- Zeldovich initial velocities for cosmological sims
 
 -- fix Gadget IO to include correct units for velocities
 
