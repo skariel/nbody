@@ -100,7 +100,7 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
             end
         end
         !silent && print("s=",sim.step," t=",sim.t," dt=",sim.dt)
-        tic()00
+        tic()
 
 
         kick!(sim, simulate_test_particles, dt=sim.dt/2)
@@ -126,7 +126,7 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
 end
 
 function set_zeldovich!(sim::Simulation, simulate_test_particles::Bool)
-    afac = 3.0/2.0*((0.05-sim.ti)/(0.05-1/51))
+    afac = (0.05-sim.ti)/(0.05-1/51)
     if afac < 0.0
         afac = 0.0
     end
