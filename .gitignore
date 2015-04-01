@@ -1,7 +1,6 @@
 *.pdf
-*.ipynb
-*.ipynb*
 *.png
 *.sim
 *.data
 *.ic
+*.txt

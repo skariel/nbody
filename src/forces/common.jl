@@ -7,7 +7,7 @@ function modify(q::OctTreeNode{Particle}, p::Particle)
     nothing
 end
 
-createtree(w::World) = OctTree(Particle; n=round(Int,3.9*w.n))
+createtree(w::World) = OctTree(Particle; n=round(Int,4.5*w.n))
 
 function buildtree!(w::World, tree::OctTree{Particle})
     clear!(tree)
