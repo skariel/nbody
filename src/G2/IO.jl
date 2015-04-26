@@ -33,9 +33,15 @@ function save_G2(w::World, fn::String, t)
         #
         ########################
         write(f, int32(4*w.n*3))
-        for p in w.particles
-            write(f, [float32(p._x), float32(p._y), float32(p._z)])
+
+        N = w.n
+        tmp_all = zeros(Float32, 3N)
+        for i in 1:N
+            tmp_all[(i-1)*3+1] = float32(w.particles[i]._x)
+            tmp_all[(i-1)*3+2] = float32(w.particles[i]._y)
+            tmp_all[(i-1)*3+3] = float32(w.particles[i]._z)
         end
+        write(f, tmp_all)
         write(f, int32(4*w.n*3))
 
         #
@@ -44,12 +50,11 @@ function save_G2(w::World, fn::String, t)
         ########################
         write(f, int32(4*w.n*3))
         for i in 1:w.n
-            write(f, [
-                float32(w.vx[i]/(t.^(3/2))),
-                float32(w.vy[i]/(t.^(3/2))),
-                float32(w.vz[i]/(t.^(3/2)))
-            ])
+            tmp_all[(i-1)*3+1] = float32(w.vx[i]/(t.^(3/2)))
+            tmp_all[(i-1)*3+2] = float32(w.vy[i]/(t.^(3/2)))
+            tmp_all[(i-1)*3+3] = float32(w.vz[i]/(t.^(3/2)))
         end
+        write(f, tmp_all)
         write(f, int32(4*w.n*3))
 
         #
@@ -97,10 +102,15 @@ function load_G2(fn::String)
         pos_x = Float64[]
         pos_y = Float64[]
         pos_z = Float64[]
+
+        N = sum(n)
+        tmp_all = zeros(Float32, 3N)
+        read!(f, tmp_all)
+
         for i in 1:sum(n)
-            push!(pos_x, float64(read(f,Float32)))
-            push!(pos_y, float64(read(f,Float32)))
-            push!(pos_z, float64(read(f,Float32)))
+            push!(pos_x, tmp_all[(i-1)*3+1])
+            push!(pos_y, tmp_all[(i-1)*3+2])
+            push!(pos_z, tmp_all[(i-1)*3+3])
         end
         @assert ff==read(f,Int32)
 
@@ -109,16 +119,18 @@ function load_G2(fn::String)
         vel_x = Float64[]
         vel_y = Float64[]
         vel_z = Float64[]
+        read!(f, tmp_all)
         for i in 1:sum(n)
-            push!(vel_x, float64(read(f,Float32)))
-            push!(vel_y, float64(read(f,Float32)))
-            push!(vel_z, float64(read(f,Float32)))
+            push!(vel_x, tmp_all[(i-1)*3+1])
+            push!(vel_y, tmp_all[(i-1)*3+2])
+            push!(vel_z, tmp_all[(i-1)*3+3])
         end
         @assert ff==read(f,Int32)
 
-        ff=read(f,Int32)
-        id = [int(read(f,Int32)) for i in 1:sum(n)]
-        @assert ff==read(f,Int32)
+        #ff=read(f,Int32)
+        #id = [int(read(f,Int32)) for i in 1:sum(n)]
+        #@assert ff==read(f,Int32)
+
         # TODO: build world here...
         smth=0.2
         opening_alpha=0.5

@@ -96,3 +96,38 @@ function filter_r{T<:SpaceType}(w::World{T}, r::Float64)
     end
     new_world
 end
+
+function filter_rate{T<:SpaceType}(w::World{T}, rate::Int64)
+    particle_arr = Particle[]
+    vx = Float64[]
+    vy = Float64[]
+    vz = Float64[]
+    for i in 1:rate:w.n
+        p = w.particles[i]
+        push!(particle_arr, p)
+        push!(vx, w.vx[i])
+        push!(vy, w.vy[i])
+        push!(vz, w.vz[i])
+    end
+    # fixing mass
+    for i in 1:length(particle_arr)
+        p = particle_arr[i]
+        particle_arr[i] = Particle(p._x,p._y,p._z,p._m*w.n/length(particle_arr))
+    end
+    mvx = mean(vx)
+    mvy = mean(vy)
+    mvz = mean(vz)
+    @show smth = sqrt(w.smth2)
+    @show opening_alpha = sqrt(w.opening_alpha2)
+    @show dtfrac = w.dtfrac
+    @show space = typeof(w.space)
+    @show Ω0 = w.Ω0
+    @show ΩΛ = w.ΩΛ
+    new_world = World(particle_arr, smth, opening_alpha, dtfrac, space, Ω0, ΩΛ)
+    for i in 1:new_world.n
+        new_world.vx[i] = vx[i]-mvx
+        new_world.vy[i] = vy[i]-mvy
+        new_world.vz[i] = vz[i]-mvz
+    end
+    new_world
+end

@@ -2,5 +2,7 @@
 *.png
 *.sim
 *.data
+*.DATA
+*.out
 *.ic
 *.txt

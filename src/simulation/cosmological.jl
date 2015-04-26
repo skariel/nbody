@@ -126,9 +126,10 @@ function exec!(sim::Simulation{Cosmological}, simulate_test_particles::Bool; use
 end
 
 function set_zeldovich!(sim::Simulation, simulate_test_particles::Bool)
-    afac = (0.05-sim.ti)/(0.05-1/51)
+    afac = (0.05-sim.ti)/(0.05-0.0196078431372549)
     if afac < 0.0
-        afac = 0.0
+        return
+#        afac = 0.0
     end
     calc_accel!(sim, simulate_test_particles)
     ah = sim.t*Ha(sim.t, sim.w)

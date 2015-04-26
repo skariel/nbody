@@ -47,8 +47,10 @@ end
 function search!(opt::Optimization, shaking=false)
     curr_grade = grade(opt)
     iter = 0
-    fa = 0.2
-    fb = 0.55
+    fa = 0.07
+    fb = 0.44
+    fa = 0.01
+    fb = 0.07
     a = 1.e30 # whatever
     b = 1.e30 # whatever
     recalc_a=true
@@ -64,7 +66,7 @@ function search!(opt::Optimization, shaking=false)
             b = grade(opt, fb)
             recalc_b = false
         end
-        iter >= 12 && break
+        iter >= 8 && break
 
         if a > curr_grade
             fb = fa
@@ -107,6 +109,33 @@ function search!(opt::Optimization, shaking=false)
     f
 end
 
+
+function fix_away_particles!(opt::Optimization)
+    for i in 1:opt.sim.w.n
+        opt.grad[i] < 0.99*opt.sim.w.smth2 && continue
+
+        # search for closest particle0
+        ixd2 = 1.e30
+        ix = -1
+        for j in 1:opt.sim.w.n
+            dx = opt.sim.w.particles[j]._x - opt.x0[i]
+            dy = opt.sim.w.particles[j]._y - opt.y0[i]
+            dz = opt.sim.w.particles[j]._z - opt.z0[i]
+            d2 = dx*dx+dy*dy+dz*dz
+            if d2 < ixd2
+                ix = j
+                ixd2 = d2
+            end
+        end
+
+        # se new location
+        opt.sim.xi[i] = opt.sim.xi[ix] + randn()*sqrt(opt.sim.w.smth2)/5.
+        opt.sim.yi[i] = opt.sim.yi[ix] + randn()*sqrt(opt.sim.w.smth2)/5.
+        opt.sim.zi[i] = opt.sim.zi[ix] + randn()*sqrt(opt.sim.w.smth2)/5.
+    end
+end
+
+
 function optimize(opt::Optimization, maxstep=10, ming=0.001)
     step = 1
     g = 1.e30 # infinity, ha!
@@ -119,26 +148,28 @@ function optimize(opt::Optimization, maxstep=10, ming=0.001)
         catch e
         end
 
+        fix_away_particles!(opt)
+
         println("step=",step," grade=",g," n=",int(f*opt.sim.w.n))
         if step >= maxstep || g <= ming
             break
         end
 
-        # getting the gradient
-        grad!(opt)
+        try
+            # getting the gradient
+            grad!(opt)
+        catch e
+        end
 
-        # filtering gradient to worst 10%
-        ga = sort(opt.grad)
-        th = ga[int(f*length(ga))]
+        # filtering gradient random 5%
         for i in 1:opt.sim.w.n
-            opt.grad[i] < th && continue
+            rand() > (1.0-f) && continue
             opt.gx[i] = 0.0
             opt.gy[i] = 0.0
             opt.gz[i] = 0.0
         end
-        f *= 0.9
-        if int(f*length(ga)) < 1
-            break
+        f = sqrt(rand())
+        if f < 0.07
             f = 1.0
         end
 
