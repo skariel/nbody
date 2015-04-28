@@ -4,6 +4,8 @@
 
 module nbody
 
+using Compat
+
 using OctTrees
 import OctTrees: modify, map, stop_cond, getx, gety, getz
 
@@ -17,6 +19,7 @@ include("space.jl")
 include("particle.jl")
 include("world/world.jl")
 include("world/realizations.jl")
+include("world/utils.jl")
 include("parallel.jl")
 include("simulation/common.jl")
 include("simulation/newtonian.jl")
@@ -30,7 +33,5 @@ include("plotting.jl")
 include("G2/IO.jl")
 include("simulation/IO.jl")
 include("world/IO.jl")
-
-#include("../test/test.jl")
 
 end # module
